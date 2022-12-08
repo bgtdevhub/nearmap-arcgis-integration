@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <!--
+ ArcGIS API for JavaScript, https://js.arcgis.com
+ Learn more about Nearmap Tile API here: https://docs.nearmap.com/display/ND/Tile+API
+ -->
+    <title>Nearmap/ArcGIS API for JavaScript Tile API Swipe Sample</title>
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #basemapToggleDiv {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+        }
+    </style>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css">
+    <script src="https://js.arcgis.com/4.22/"></script>
+    <script>
+        require([
+            "esri/layers/WebTileLayer",
+            "esri/Map",
+            "esri/Basemap",
+            "esri/widgets/BasemapToggle",
+            "esri/views/MapView",
+            "esri/layers/support/TileInfo",
+            "esri/widgets/Search",
+            "esri/geometry/SpatialReference",
+            "esri/layers/support/LOD",
+            "esri/geometry/Point",
+            "esri/widgets/LayerList",
+            "esri/widgets/Swipe",
+            "esri/widgets/Expand",
+            "dojo/domReady!"
+        ], function(WebTileLayer, Map, Basemap, BasemapToggle, MapView, TileInfo, Search, SpatialReference, LOD, Point,
+                    LayerList, Swipe, Expand) {
+
+            //////////////////////
+            // User Input Parameters
+            ////////////////////
+            const api_key = "MmMyZjMyYWUtOWU5OC00NWM0LWJkMTctMzM2NmI5Y2E0ZWRk"  // "NEARMAP_API_KEY_GOES_HERE"
+            const direction = 'Vert'; // Options: 'Vert', 'North', // Note: awaiting fix from esri to support E, W, S
+            const origin = [-97.75,30.269135];  // [Lat, Lon] for Location: ex: Austin, TX
+            const origin_zoom = 17;  // Starting Zoom level for the Web Map
+            let nearmap_min_zoom = 17;  // Nearmap Imagery Lowest resolution zoom level the user can view
+            const nearmap_max_zoom = 24;  // Nearmap Imagery Highest resolution zoom level the user can view
+            const since = "2014-09-28"; // Imagery since date
+            const until = "2021-10-29"; // Imagery until date
+            const opacity = 1.0; // Range of 0.1 to 1.0
+            const blend_mode = null; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
+            // blend_mode values "average"|"color-burn"|"color-dodge"|"color"|"darken"|"destination-atop"|"destination-in"|"destination-out"|"destination-over"|"difference"|"exclusion"|"hard-light"|"hue"|"invert"|"lighten"|"lighter"|"luminosity"|"minus"|"multiply"|"normal"|"overlay"|"plus"|"reflect"|"saturation"|"screen"|"soft-light"|"source-atop"|"source-in"|"source-out"|"vivid-light"|"xor"
+
+            ///////////
+            // Script
+            /////////
+
+            // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
+            // By default ArcGIS SDK only goes to zoom level 19,
+            // In order to overcome this, we need to add more Level Of Detail (LOD) entries to both the view and the web tile layer
+            let lods = [];
+            const tilesize = 256;
+            const earthCircumference = 40075016.685568;
+            const inchesPerMeter = 39.37;
+            const initialResolution = earthCircumference / tilesize;
+            for (let zoom = nearmap_min_zoom; zoom <= nearmap_max_zoom; zoom++) {
+                let resolution = initialResolution / Math.pow(2, zoom);
+                let scale = resolution * 96 * inchesPerMeter;
+                lods.push(new LOD({
+                    level: zoom,
+                    scale: scale,
+                    resolution: resolution
+                }));
+            }
+            // Create a tileinfo instance with increased level of detail
+            // using the lod array we created earlier
+            // We need to use rows and cols (currently undocumented in https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-support-TileInfo.html)
+            // in addition to width and height properties
+            const tileInfo = new TileInfo({
+                cols: 256,
+                dpi: 72,
+                format: "jpg",
+                height: 256,
+                lods: lods,
+                origin: new Point({
+                    x: -20037508.342787,
+                    y: 20037508.342787
+                }),
+                rows: 256,
+                spatialReference: SpatialReference.WebMercator,
+                width: 256
+            });
+
+            // Create a WebTileLayer for Nearmap imagery.
+            // We are using tileinfo we created earlier.
+            const nearmap_since = new WebTileLayer({
+                urlTemplate: `https://api.nearmap.com/tiles/v3/${direction}/{level}/{col}/{row}.img?apikey=${api_key}&since=${since}`,
+                copyright: "Nearmap",
+                tileInfo: tileInfo,
+                title: `Nearmap Since ${since}`,
+                opacity: opacity,
+                blendMode: blend_mode
+            });
+
+            // Create a WebTileLayer for Nearmap imagery.
+            // We are using tileinfo we created earlier.
+            const nearmap_until = new WebTileLayer({
+                urlTemplate: `https://api.nearmap.com/tiles/v3/${direction}/{level}/{col}/{row}.img?apikey=${api_key}&until=${until}`,
+                copyright: "Nearmap",
+                tileInfo: tileInfo,
+                title: `Nearmap Until ${until}`,
+                opacity: opacity,
+                blendMode: blend_mode
+            });
+
+
+            const map = new Map({
+                basemap: "topo-vector",
+                ground: "world-elevation",
+            });
+
+            const view = new MapView({
+                container: "viewDiv",
+                map: map,
+                zoom: origin_zoom - nearmap_min_zoom,
+                center: origin,
+                minZoom: nearmap_min_zoom,
+                maxZoom: nearmap_max_zoom,
+                constraints: {
+                    lods: lods
+                },
+            });
+
+            // create a layerlist and expand widget and add to the view
+            const layerList = new LayerList({
+                view: view
+            });
+            const llExpand = new Expand({
+                view: view,
+                content: layerList,
+                expanded: false
+            });
+            view.ui.add(llExpand, "top-right");
+
+            // create a new Swipe widget
+            const swipe = new Swipe({
+                leadingLayers: [nearmap_since],
+                trailingLayers: [nearmap_until],
+                position: 35, // set position of widget to 35%
+                view: view
+            });
+
+            // add the widget to the view
+            view.ui.add(swipe);
+            map.add(nearmap_since);
+            map.add(nearmap_until);
+        });
+    </script>
+</head>
+
+<body>
+<div id="viewDiv">
+    <div id="basemapToggleDiv"></div>
+</div>
+</body>
+
+</html>

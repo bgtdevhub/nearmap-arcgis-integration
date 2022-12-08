@@ -1,0 +1,30 @@
+@import '@arcgis/core/assets/esri/themes/dark/main.css';
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+html,
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+html,
+body,
+#viewDiv {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+#mapDatePicker {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  transform: translate(-50%);
+}
+
+#basemapToggleDiv {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 50;
+}
