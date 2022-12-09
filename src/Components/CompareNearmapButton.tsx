@@ -16,11 +16,15 @@ const CompareNearmapButton = ({ compare, set }: compareProps): JSX.Element => {
         set(!compare);
         console.log(compare);
       }}
-      size="large"
+      size="small"
       variant="contained"
-      sx={{ backgroundColor: 'white', paddingY: '15px', marginX: '0.5rem' }}
+      sx={{
+        backgroundColor: 'white',
+        paddingY: '8px',
+        margin: '0.5rem'
+      }}
     >
-      <CompareIcon color="primary" />
+      <CompareIcon fontSize="medium" color="primary" />
     </Button>
   );
 };

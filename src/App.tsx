@@ -12,16 +12,18 @@ import Point from '@arcgis/core/geometry/Point';
 import LayerList from '@arcgis/core/widgets/LayerList';
 import Swipe from '@arcgis/core/widgets/Swipe';
 import Expand from '@arcgis/core/widgets/Expand';
-// import format from 'date-fns/format'
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import format from 'date-fns/format';
+
 import MapDatepicker from './Components/MapDatepicker';
 import CompareNearmapButton from './Components/CompareNearmapButton';
+import { lat2tile, lon2tile } from './Components/Utils';
 
 import './App.css';
 
 const App = (): JSX.Element => {
   // User Input Parameters
-  // const dateToday = format(new Date(), 'yyyy-MM-dd')
+  const dateToday = format(new Date(), 'yyyy-MM-dd');
   const mapRef = useRef<any>();
   const view = useRef<__esri.MapView>();
 
@@ -34,12 +36,19 @@ const App = (): JSX.Element => {
   const nearmapMinZoom = 17; // Nearmap Imagery Lowest resolution zoom level the user can view
   const nearmapMaxZoom = 24; // Nearmap Imagery Highest resolution zoom level the user can view
   // const since = '2014-09-28'; // Imagery since date
-  const initalDate = '2021-10-29'; // Imagery until date
+  // const initalDate = '2014-09-28'; // Imagery until date
   const opacity = 1.0; // Range of 0.1 to 1.0
   const blendMode = 'darken'; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
-  const [mapDate, setMapDate] = useState(initalDate);
-  const [compareDate, setCompareDate] = useState(initalDate);
+
+  const originLon = lon2tile(origin[0], originZoom);
+  const originLat = lat2tile(origin[1], originZoom);
+  console.log(originLat, originLon);
+
+  const [mapDate, setMapDate] = useState(dateToday);
+  const [compareDate, setCompareDate] = useState(dateToday);
   const [compare, setCompare] = useState(false);
+  const [dateList, setDateList] = useState([dateToday]);
+  // console.log(dateToday);
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -60,6 +69,21 @@ const App = (): JSX.Element => {
       })
     );
   }
+
+  useEffect(() => {
+    fetch(
+      `https://api.nearmap.com/coverage/v2/coord/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}`
+    )
+      .then(async (response) => await response.json())
+      .then((data) => {
+        const nmDateList = data.surveys.map((d: any) => d.captureDate);
+        setDateList(nmDateList);
+        setMapDate(nmDateList[0]);
+        setCompareDate(nmDateList[0]);
+        console.log(nmDateList);
+      })
+      .catch((err) => console.log(err));
+  }, [originZoom, originLon, originLat]);
 
   // Create a tileinfo instance with increased level of detail
   // using the lod array we created earlier
@@ -83,6 +107,12 @@ const App = (): JSX.Element => {
     ground: 'world-elevation'
   });
 
+  // generate tile ID
+  const generateTileID = (date: string, compare = false): string => {
+    return compare ? `compare-${date}` : date;
+  };
+
+  // generate tile web layer
   const generateTileWebLayer = (
     date: string,
     compare = false
@@ -90,14 +120,29 @@ const App = (): JSX.Element => {
     // Create a WebTileLayer for Nearmap imagery.
     // We are using tileinfo we created earlier.
     return new WebTileLayer({
-      urlTemplate: `${tileURL}/${direction}/{level}/{col}/{row}.img?apikey=${nApiKey}&since=${date}`,
+      urlTemplate: `${tileURL}/${direction}/{level}/{col}/{row}.img?apikey=${nApiKey}&until=${date}`,
       copyright: 'Nearmap',
       tileInfo,
       title: `Nearmap for ${date}`,
       opacity,
       blendMode,
-      id: compare ? `compare-${date}` : date
+      id: generateTileID(date, compare)
     });
+  };
+
+  // date change hook
+  const useMapDate = (date: string, compare = false): void => {
+    useEffect(() => {
+      const newMapLayer = generateTileWebLayer(date, compare);
+      view.current?.map.add(newMapLayer);
+
+      return () => {
+        const oldLayers: any = view.current?.map.layers.filter(
+          (y) => y.id === generateTileID(date, compare)
+        );
+        view.current?.map.removeMany(oldLayers);
+      };
+    }, [date]);
   };
 
   // run on mount
@@ -145,31 +190,16 @@ const App = (): JSX.Element => {
       .catch((err) => console.log(err));
   }, []);
 
-  // change date function
-  useEffect(() => {
-    console.log('*********************************');
-    console.log('newDate', mapDate);
-    const newMapLayer = generateTileWebLayer(mapDate);
-    console.log('newLayer', newMapLayer);
-    // map.add(newMapLayer);
-    view.current?.map.add(newMapLayer);
+  // map date
+  useMapDate(mapDate);
 
-    return () => {
-      console.log('*********************************');
-      console.log('oldDate', mapDate);
-      // const oldLayer = map.findLayerById(mapDate);
-      const oldLayers = view.current?.map.layers.filter(
-        (y) => y.id === mapDate
-      );
-      console.log('oldLayer', oldLayers);
-      view.current?.map.removeMany(oldLayers as any);
-    };
-  }, [mapDate]);
+  // compare date
+  // useMapDate(compareDate, true);
 
   // compare function
   useEffect(() => {
     if (compare) {
-      const nearmapLead = map.findLayerById(mapDate);
+      const nearmapLead: any = view.current?.map.findLayerById(mapDate);
       const nearmapTrail = generateTileWebLayer(compareDate, true);
 
       // create a new Swipe widget
@@ -181,12 +211,13 @@ const App = (): JSX.Element => {
         id: `compare-swipe`
       });
       view.current?.ui.add(swipe);
-      map.add(nearmapTrail);
+      view.current?.map.add(nearmapTrail);
     }
     return () => {
+      const compareID = generateTileID(compareDate, true);
       const oldSwipe = view.current?.ui.find('compare-swipe');
-      console.log('oldSwipe', oldSwipe);
-      const oldCompareLayer = map.findLayerById(`compare-${compareDate}`);
+      // console.log('oldSwipe', oldSwipe);
+      const oldCompareLayer = map.findLayerById(compareID);
 
       if (oldSwipe !== undefined) {
         view.current?.ui.remove(oldSwipe);
@@ -194,15 +225,24 @@ const App = (): JSX.Element => {
       }
     };
   }, [compare]);
+  console.log('from app', view.current?.center);
 
   return (
     <>
       <div id="viewDiv" ref={mapRef}></div>
       <div id="mapDatePicker">
-        <MapDatepicker mapDate={mapDate} setMapDate={setMapDate} />
+        <MapDatepicker
+          mapDate={mapDate}
+          setMapDate={setMapDate}
+          dateList={dateList}
+        />
         <CompareNearmapButton compare={compare} set={setCompare} />
         {compare && (
-          <MapDatepicker mapDate={compareDate} setMapDate={setCompareDate} />
+          <MapDatepicker
+            mapDate={compareDate}
+            setMapDate={setCompareDate}
+            dateList={dateList}
+          />
         )}
       </div>
     </>
