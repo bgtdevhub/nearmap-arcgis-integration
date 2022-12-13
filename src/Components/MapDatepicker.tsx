@@ -1,4 +1,4 @@
-import Select from '@mui/material/Select';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import parse from 'date-fns/parse';
 import format from 'date-fns/format';
@@ -7,6 +7,10 @@ import TripOriginOutlinedIcon from '@mui/icons-material/TripOriginOutlined';
 import FormControl from '@mui/material/FormControl';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import Button from '@mui/material/Button';
+import { useState } from 'react';
 // import { useEffect } from 'react';
 
 interface DatePickerProps {
@@ -59,14 +63,15 @@ const renderMenuItem = (dateList: string[]): JSX.Element[] => {
   });
 };
 
-// const nApiKey: string = import.meta.env.VITE_NEARMAP_KEY;
-
 const MapDatepicker = ({
   mapDate,
   setMapDate,
   dateList
 }: DatePickerProps): JSX.Element => {
-  // const dateListMock = ['2021-10-29', '2021-09-29', '2014-09-28'];
+  const [nextDisabled, setNextDisabled] = useState(false);
+  const [prevDisabled, setPrevDisabled] = useState(true);
+
+  // render years
   const yearList1 = dateList.map((y) => {
     return y.substring(0, 4);
   });
@@ -74,28 +79,100 @@ const MapDatepicker = ({
 
   const menuItem = uniqYearList.map((y2) => {
     const sameYear = dateList.filter((d) => y2 === d.substring(0, 4));
-    const sameYear2 = [y2, ...sameYear];
-    return renderMenuItem(sameYear2);
+    return [y2, ...sameYear];
   });
-
   const finalMenuItem = menuItem.flat();
 
+  // change button disability, return target index
+  const navButtonState = (currentIndex: number): void => {
+    switch (true) {
+      // disable next button if last record, last should never be a year
+      case currentIndex === finalMenuItem.length - 1: {
+        setNextDisabled(true);
+        setPrevDisabled(false);
+        break;
+      }
+      // disable prev button if 2nd record, 1st should always be a year
+      case currentIndex === 1: {
+        setPrevDisabled(true);
+        setNextDisabled(false);
+        break;
+      }
+      // enable both next and prev button
+      default: {
+        setNextDisabled(false);
+        setPrevDisabled(false);
+        break;
+      }
+    }
+  };
+
+  // get target date, next or previous function
+  const getTargetDate = (next = true): void => {
+    const currentIndex = finalMenuItem.findIndex((i) => i === mapDate);
+    let targetIndex = next ? currentIndex + 1 : currentIndex - 1;
+
+    // skip year item
+    if (finalMenuItem[targetIndex].length === 4) {
+      targetIndex = next ? targetIndex + 1 : targetIndex - 1;
+    }
+    setMapDate(finalMenuItem[targetIndex]);
+    navButtonState(targetIndex);
+  };
+
+  const handleDateChange = (e: SelectChangeEvent<string>): void => {
+    const currentIndex = finalMenuItem.findIndex((i) => i === e.target.value);
+    setMapDate(e.target.value);
+    navButtonState(currentIndex);
+  };
+
   return (
-    <FormControl sx={{ m: 1 }} size="small">
-      <Select
-        labelId="demo-simple-select-label"
-        id="demo-simple-select"
-        value={mapDate}
-        label="Map Date"
-        onChange={(e) => setMapDate(e.target.value)}
-        sx={{ backgroundColor: 'white', fontWeight: 'bold' }}
-        MenuProps={{ sx: { maxHeight: '500px' } }}
-        IconComponent={() => null}
-        renderValue={(s) => renderSelectedDate(s)}
+    <>
+      <Button
+        variant="text"
+        color="inherit"
+        onClick={() => getTargetDate(false)}
+        disabled={prevDisabled}
+        sx={{
+          backgroundColor: 'white',
+          paddingY: '8px'
+        }}
       >
-        {finalMenuItem}
-      </Select>
-    </FormControl>
+        <NavigateBeforeIcon />
+      </Button>
+      <FormControl size="small">
+        <Select
+          labelId="demo-simple-select-label"
+          id="demo-simple-select"
+          value={mapDate}
+          label="Map Date"
+          onChange={handleDateChange}
+          sx={{
+            backgroundColor: 'white',
+            fontWeight: 'bold',
+            marginTop: '0.5rem',
+            borderRadius: '0px'
+          }}
+          MenuProps={{ sx: { maxHeight: '500px' } }}
+          IconComponent={() => null}
+          renderValue={(s) => renderSelectedDate(s)}
+        >
+          {renderMenuItem(finalMenuItem)}
+        </Select>
+      </FormControl>
+      <Button
+        variant="text"
+        color="inherit"
+        onClick={() => getTargetDate(true)}
+        disabled={nextDisabled}
+        sx={{
+          backgroundColor: 'white',
+          paddingY: '8px'
+        }}
+      >
+        <NavigateNextIcon />
+      </Button>
+    </>
   );
 };
 

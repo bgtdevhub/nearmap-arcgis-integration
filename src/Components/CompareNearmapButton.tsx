@@ -9,7 +9,6 @@ interface compareProps {
 const CompareNearmapButton = ({ compare, set }: compareProps): JSX.Element => {
   return (
     <Button
-      color="primary"
       aria-label="compare map"
       component="label"
       onClick={() => {
@@ -18,13 +17,14 @@ const CompareNearmapButton = ({ compare, set }: compareProps): JSX.Element => {
       }}
       size="small"
       variant="contained"
+      color="inherit"
       sx={{
         backgroundColor: 'white',
         paddingY: '8px',
         margin: '0.5rem'
       }}
     >
-      <CompareIcon fontSize="medium" color="primary" />
+      <CompareIcon fontSize="medium" color="inherit" />
     </Button>
   );
 };

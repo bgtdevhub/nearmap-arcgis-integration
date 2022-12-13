@@ -9,9 +9,9 @@ import Search from '@arcgis/core/widgets/Search';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import LOD from '@arcgis/core/layers/support/LOD';
 import Point from '@arcgis/core/geometry/Point';
-import LayerList from '@arcgis/core/widgets/LayerList';
+// import LayerList from '@arcgis/core/widgets/LayerList';
 import Swipe from '@arcgis/core/widgets/Swipe';
-import Expand from '@arcgis/core/widgets/Expand';
+// import Expand from '@arcgis/core/widgets/Expand';
 import { useEffect, useRef, useState } from 'react';
 import format from 'date-fns/format';
 
@@ -37,18 +37,14 @@ const App = (): JSX.Element => {
   const nearmapMaxZoom = 24; // Nearmap Imagery Highest resolution zoom level the user can view
   // const since = '2014-09-28'; // Imagery since date
   // const initalDate = '2014-09-28'; // Imagery until date
-  const opacity = 1.0; // Range of 0.1 to 1.0
+  const opacity = 0.8; // Range of 0.1 to 1.0
   const blendMode = 'darken'; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
-
-  const originLon = lon2tile(origin[0], originZoom);
-  const originLat = lat2tile(origin[1], originZoom);
-  console.log(originLat, originLon);
 
   const [mapDate, setMapDate] = useState(dateToday);
   const [compareDate, setCompareDate] = useState(dateToday);
   const [compare, setCompare] = useState(false);
   const [dateList, setDateList] = useState([dateToday]);
-  // console.log(dateToday);
+  const [lonLat, setLonLat] = useState(origin);
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -71,6 +67,9 @@ const App = (): JSX.Element => {
   }
 
   useEffect(() => {
+    const originLon = lon2tile(lonLat[0], originZoom);
+    const originLat = lat2tile(lonLat[1], originZoom);
+
     fetch(
       `https://api.nearmap.com/coverage/v2/coord/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}`
     )
@@ -80,10 +79,10 @@ const App = (): JSX.Element => {
         setDateList(nmDateList);
         setMapDate(nmDateList[0]);
         setCompareDate(nmDateList[0]);
-        console.log(nmDateList);
+        // console.log(nmDateList);
       })
       .catch((err) => console.log(err));
-  }, [originZoom, originLon, originLat]);
+  }, [originZoom, lonLat]);
 
   // Create a tileinfo instance with increased level of detail
   // using the lod array we created earlier
@@ -168,17 +167,25 @@ const App = (): JSX.Element => {
       view: view.current
     });
     view.current.ui.add(search, 'top-left');
+    search.on('select-result', (e) => {
+      // console.log(e.result.extent.center.longitude);
+      // console.log(e.result.extent.center.latitude);
+      setLonLat([
+        e.result.extent.center.longitude,
+        e.result.extent.center.latitude
+      ]);
+    });
 
     // create a layerlist and expand widget and add to the view
-    const layerList = new LayerList({
-      view: view.current
-    });
-    const llExpand = new Expand({
-      view: view.current,
-      content: layerList,
-      expanded: true
-    });
-    view.current.ui.add(llExpand, 'top-right');
+    // const layerList = new LayerList({
+    //   view: view.current
+    // });
+    // const llExpand = new Expand({
+    //   view: view.current,
+    //   content: layerList,
+    //   expanded: true
+    // });
+    // view.current.ui.add(llExpand, 'top-right');
 
     // add the widget to the view
     map.add(nearmapSince);
@@ -225,7 +232,7 @@ const App = (): JSX.Element => {
       }
     };
   }, [compare]);
-  console.log('from app', view.current?.center);
+  // console.log('from app', view.current?.center);
 
   return (
     <>
