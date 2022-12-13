@@ -66,6 +66,7 @@ const App = (): JSX.Element => {
     );
   }
 
+  // fetch list of capture date based on origin
   useEffect(() => {
     const originLon = lon2tile(lonLat[0], originZoom);
     const originLat = lat2tile(lonLat[1], originZoom);
@@ -76,9 +77,11 @@ const App = (): JSX.Element => {
       .then(async (response) => await response.json())
       .then((data) => {
         const nmDateList = data.surveys.map((d: any) => d.captureDate);
+        if (dateList.join() !== nmDateList.join()) {
         setDateList(nmDateList);
         setMapDate(nmDateList[0]);
         setCompareDate(nmDateList[0]);
+        }
         // console.log(nmDateList);
       })
       .catch((err) => console.log(err));
@@ -189,6 +192,16 @@ const App = (): JSX.Element => {
 
     // add the widget to the view
     map.add(nearmapSince);
+
+    // drag? set center back
+    view.current.on('drag', (e) => {
+      if (e.action === 'end') {
+        setLonLat([
+          view.current?.center.longitude as number,
+          view.current?.center.latitude as number
+        ]);
+      }
+    });
 
     view.current
       .when(() => {
