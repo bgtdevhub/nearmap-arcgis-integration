@@ -10,6 +10,7 @@ import ListItemText from '@mui/material/ListItemText';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 import { useState } from 'react';
 // import { useEffect } from 'react';
 
@@ -18,6 +19,16 @@ interface DatePickerProps {
   setMapDate: any;
   dateList: string[];
 }
+
+const buttonStyle = {
+  backgroundColor: 'white',
+  py: '8px',
+  mx: '-2px',
+  zIndex: 999,
+  '&:hover': {
+    backgroundColor: 'ghostwhite'
+  }
+};
 
 const renderSelectedDate = (date: string): string => {
   const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
@@ -42,19 +53,19 @@ const renderMenuItem = (dateList: string[]): JSX.Element[] => {
         key={d}
         value={d}
         sx={{
-          fontSize: 'small',
           backgroundImage:
             'linear-gradient(rgb(129, 129, 129), rgb(129, 129, 129))',
           backgroundSize: '2px 100%',
           backgroundRepeat: 'no-repeat',
-          backgroundPosition: '15%'
+          backgroundPosition: '9%',
+          pr: '8rem'
         }}
       >
         <ListItemIcon>
           <TripOriginOutlinedIcon
             fontSize="small"
             color="action"
-            sx={{ padding: '3px', background: 'white', borderRadius: '50%' }}
+            sx={{ padding: '2px', background: 'white', borderRadius: '50%' }}
           />
         </ListItemIcon>
         <ListItemText>{formatDate}</ListItemText>
@@ -127,16 +138,14 @@ const MapDatepicker = ({
   };
 
   return (
-    <>
+    <Box sx={{ gridColumn: '1/3', justifySelf: 'stretch' }}>
       <Button
+        title="Previous Date"
         variant="text"
         color="inherit"
         onClick={() => getTargetDate(false)}
         disabled={prevDisabled}
-        sx={{
-          backgroundColor: 'white',
-          paddingY: '8px'
-        }}
+        sx={buttonStyle}
       >
         <NavigateBeforeIcon />
       </Button>
@@ -150,10 +159,26 @@ const MapDatepicker = ({
           sx={{
             backgroundColor: 'white',
             fontWeight: 'bold',
-            marginTop: '0.5rem',
             borderRadius: '0px'
+            // '&:hover': {
+            //   '& fieldset': {
+            //     borderColor: 'red'
+            //   }
+            // }
           }}
-          MenuProps={{ sx: { maxHeight: '500px' } }}
+          MenuProps={{
+            anchorOrigin: {
+              vertical: 'bottom',
+              horizontal: 'center'
+            },
+            transformOrigin: {
+              vertical: 515,
+              horizontal: 'center'
+            },
+            sx: {
+              maxHeight: '500px'
+            }
+          }}
           IconComponent={() => null}
           renderValue={(s) => renderSelectedDate(s)}
         >
@@ -161,18 +186,16 @@ const MapDatepicker = ({
         </Select>
       </FormControl>
       <Button
+        title="Next Date"
         variant="text"
         color="inherit"
         onClick={() => getTargetDate(true)}
         disabled={nextDisabled}
-        sx={{
-          backgroundColor: 'white',
-          paddingY: '8px'
-        }}
+        sx={buttonStyle}
       >
         <NavigateNextIcon />
       </Button>
-    </>
+    </Box>
   );
 };
 
