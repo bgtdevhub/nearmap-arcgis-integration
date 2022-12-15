@@ -150,8 +150,8 @@ const MapDatepicker = ({
         title="Previous Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(false)}
-        disabled={prevDisabled}
+        onClick={() => getTargetDate(true)}
+        disabled={nextDisabled}
         sx={buttonStyle}
       >
         <NavigateBeforeIcon />
@@ -194,8 +194,8 @@ const MapDatepicker = ({
         title="Next Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(true)}
-        disabled={nextDisabled}
+        onClick={() => getTargetDate(false)}
+        disabled={prevDisabled}
         sx={buttonStyle}
       >
         <NavigateNextIcon />

@@ -2,7 +2,7 @@ import esriConfig from '@arcgis/core/config';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
-// import Basemap from '@arcgis/core/Basemap'
+import Basemap from '@arcgis/core/Basemap';
 // import BasemapToggle from '@arcgis/core/widgets/BasemapToggle'
 import TileInfo from '@arcgis/core/layers/support/TileInfo';
 import Search from '@arcgis/core/widgets/Search';
@@ -28,7 +28,7 @@ const App = (): JSX.Element => {
   const mapRef = useRef<any>();
   const view = useRef<__esri.MapView>();
 
-  esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
+  // esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
   esriConfig.request.timeout = 90000;
   const nApiKey: string = import.meta.env.VITE_NEARMAP_KEY; // "NEARMAP_API_KEY_GOES_HERE"
   const tileURL = 'https://api.nearmap.com/tiles/v3';
@@ -37,16 +37,14 @@ const App = (): JSX.Element => {
   const originZoom = 17; // Starting Zoom level for the Web Map
   const nearmapMinZoom = 17; // Nearmap Imagery Lowest resolution zoom level the user can view
   const nearmapMaxZoom = 24; // Nearmap Imagery Highest resolution zoom level the user can view
-  // const since = '2014-09-28'; // Imagery since date
-  // const initalDate = '2014-09-28'; // Imagery until date
   const opacity = 1; // Range of 0.1 to 1.0
   const blendMode = 'darken'; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
 
   const [mapDate, setMapDate] = useState(dateToday);
-  // const [compareDate, setCompareDate] = useState(dateToday);
-  // const [compare, setCompare] = useState(false);
   const [dateList, setDateList] = useState([dateToday]);
   const [lonLat, setLonLat] = useState(origin);
+  // const [compareDate, setCompareDate] = useState(dateToday);
+  // const [compare, setCompare] = useState(false);
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -78,13 +76,17 @@ const App = (): JSX.Element => {
     )
       .then(async (response) => await response.json())
       .then((data) => {
-        const nmDateList = data.surveys.map((d: any) => d.captureDate);
+        const nmDateList: string[] = data.surveys.map(
+          (d: any) => d.captureDate
+        );
         if (dateList.join() !== nmDateList.join()) {
           setDateList(nmDateList);
-          setMapDate(nmDateList[0]);
-          // setCompareDate(nmDateList[0]);
+
+          if (!nmDateList.includes(mapDate)) {
+            setMapDate(nmDateList[0]);
+            // setCompareDate(nmDateList[0]);
+          }
         }
-        // console.log(nmDateList);
       })
       .catch((err) => console.log(err));
   }, [originZoom, lonLat]);
@@ -105,58 +107,58 @@ const App = (): JSX.Element => {
     size: [256, 256]
   });
 
-  const map = new Map({
-    // basemap: 'topo-vector',
-    basemap: 'arcgis-navigation',
-    ground: 'world-elevation'
-  });
-
   // generate tile ID
   const generateTileID = (date: string, compare = false): string => {
     return compare ? `compare-${date}` : date;
   };
 
   // generate tile web layer
-  const generateTileWebLayer = (
-    date: string,
-    compare = false
-  ): __esri.WebTileLayer => {
+  const generateBaseMap = (date: string, compare = false): __esri.Basemap => {
+    const id = generateTileID(date, compare);
     // Create a WebTileLayer for Nearmap imagery.
     // We are using tileinfo we created earlier.
-    return new WebTileLayer({
+    const wtl = new WebTileLayer({
       urlTemplate: `${tileURL}/${direction}/{level}/{col}/{row}.img?apikey=${nApiKey}&until=${date}`,
       copyright: 'Nearmap',
       tileInfo,
       title: `Nearmap for ${date}`,
       opacity,
       blendMode,
-      id: generateTileID(date, compare)
+      id
     });
 
-    // wtl.on('layerview-create-error', () => {
-    //   wtl.load().catch((err) => console.log(err));
-    // });
-    // return wtl;
+    wtl.on('layerview-create-error', () => {
+      wtl.load().catch((err) => console.log(err));
+    });
+
+    return new Basemap({
+      baseLayers: [wtl],
+      title: `Nearmap for ${date}`,
+      id
+    });
   };
 
   // date change hook
   const useMapDate = (date: string, compare = false): void => {
     useEffect(() => {
-      const newMapLayer = generateTileWebLayer(date, compare);
-      view.current?.map.add(newMapLayer);
+      const newMapLayer = generateBaseMap(date, compare);
+      if (view.current !== undefined) {
+        view.current.map.basemap = newMapLayer;
+      }
 
       return () => {
-        const oldLayers: any = view.current?.map.layers.filter(
-          (y) => y.id === generateTileID(date, compare)
-        );
-        view.current?.map.removeMany(oldLayers);
+        view.current?.map.basemap.destroy();
       };
     }, [date]);
   };
 
   // run on mount
   useEffect(() => {
-    const nearmapSince = generateTileWebLayer(mapDate);
+    const nearmapSince = generateBaseMap(mapDate);
+
+    const map = new Map({
+      basemap: nearmapSince
+    });
 
     view.current = new MapView({
       container: mapRef.current,
@@ -167,10 +169,16 @@ const App = (): JSX.Element => {
         lods,
         // minZoom: nearmapMinZoom,
         maxZoom: nearmapMaxZoom
+      },
+      popup: {
+        dockEnabled: true,
+        dockOptions: {
+          buttonEnabled: false,
+          breakpoint: false
+        }
       }
     });
     view.current.ui.move('zoom', 'bottom-left');
-    // console.log(view.current.center);
 
     // create search
     const search = new Search({
@@ -195,8 +203,8 @@ const App = (): JSX.Element => {
     // });
     // view.current.ui.add(llExpand, 'top-right');
 
-    // add the widget to the view
-    map.add(nearmapSince);
+    // add the layer to the view
+    // map.add(nearmapSince);
 
     // drag? set center back
     view.current.on('drag', (e) => {
