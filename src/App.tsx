@@ -9,9 +9,9 @@ import Search from '@arcgis/core/widgets/Search';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import LOD from '@arcgis/core/layers/support/LOD';
 import Point from '@arcgis/core/geometry/Point';
-import LayerList from '@arcgis/core/widgets/LayerList';
+// import LayerList from '@arcgis/core/widgets/LayerList';
 // import Swipe from '@arcgis/core/widgets/Swipe';
-import Expand from '@arcgis/core/widgets/Expand';
+// import Expand from '@arcgis/core/widgets/Expand';
 import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import format from 'date-fns/format';
@@ -29,6 +29,7 @@ const App = (): JSX.Element => {
   const view = useRef<__esri.MapView>();
 
   esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
+  esriConfig.request.timeout = 90000;
   const nApiKey: string = import.meta.env.VITE_NEARMAP_KEY; // "NEARMAP_API_KEY_GOES_HERE"
   const tileURL = 'https://api.nearmap.com/tiles/v3';
   const direction = 'Vert'; // Options: 'Vert', 'North', // Note: awaiting fix from esri to support E, W, S
@@ -73,7 +74,7 @@ const App = (): JSX.Element => {
     const originLat = lat2tile(lonLat[1], originZoom);
 
     fetch(
-      `https://api.nearmap.com/coverage/v2/coord/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}`
+      `https://api.nearmap.com/coverage/v2/coord/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=50`
     )
       .then(async (response) => await response.json())
       .then((data) => {
@@ -131,6 +132,11 @@ const App = (): JSX.Element => {
       blendMode,
       id: generateTileID(date, compare)
     });
+
+    // wtl.on('layerview-create-error', () => {
+    //   wtl.load().catch((err) => console.log(err));
+    // });
+    // return wtl;
   };
 
   // date change hook
@@ -178,16 +184,16 @@ const App = (): JSX.Element => {
       ]);
     });
 
-    // create a layerlist and expand widget and add to the view
-    const layerList = new LayerList({
-      view: view.current
-    });
-    const llExpand = new Expand({
-      view: view.current,
-      content: layerList,
-      expanded: true
-    });
-    view.current.ui.add(llExpand, 'top-right');
+    // // create a layerlist and expand widget and add to the view
+    // const layerList = new LayerList({
+    //   view: view.current
+    // });
+    // const llExpand = new Expand({
+    //   view: view.current,
+    //   content: layerList,
+    //   expanded: true
+    // });
+    // view.current.ui.add(llExpand, 'top-right');
 
     // add the widget to the view
     map.add(nearmapSince);

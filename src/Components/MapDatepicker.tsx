@@ -25,8 +25,15 @@ const buttonStyle = {
   py: '8px',
   mx: '-2px',
   zIndex: 999,
+  outline: 'none',
   '&:hover': {
     backgroundColor: 'ghostwhite'
+  },
+  '&:focus': {
+    outline: 'none'
+  },
+  '&:focusVisible': {
+    outline: 'none'
   }
 };
 
@@ -159,12 +166,10 @@ const MapDatepicker = ({
           sx={{
             backgroundColor: 'white',
             fontWeight: 'bold',
-            borderRadius: '0px'
-            // '&:hover': {
-            //   '& fieldset': {
-            //     borderColor: 'red'
-            //   }
-            // }
+            borderRadius: '0px',
+            '&& fieldset': {
+              border: 'none'
+            }
           }}
           MenuProps={{
             anchorOrigin: {
