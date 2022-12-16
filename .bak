@@ -1,8 +1,0 @@
-  // coverage
-  // https://api.nearmap.com/coverage/v2/coord/17/29942/53961?apikey=MmMyZjMyYWUtOWU5OC00NWM0LWJkMTctMzM2NmI5Y2E0ZWRk
-
-  // calculate tile size
-  // const tileCoordinate = new google.maps.Point(
-  //   Math.floor((worldCoordinate.x * scale) / TILE_SIZE),
-  //   Math.floor((worldCoordinate.y * scale) / TILE_SIZE)
-  // );
