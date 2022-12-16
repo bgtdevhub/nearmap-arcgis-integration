@@ -1,4 +1,4 @@
-@import '@arcgis/core/assets/esri/themes/dark/main.css';
+@import '@arcgis/core/assets/esri/themes/light/main.css';
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 html,
@@ -20,6 +20,24 @@ body,
   left: 50%;
   bottom: 2%;
   transform: translate(-50%);
+}
+
+.esri-zoom {
+  position: absolute;
+  right: 24px;
+  bottom: 9.2%;
+}
+
+.esri-compass {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+}
+
+.esri-locate {
+  position: absolute;
+  right: 24px;
+  bottom: 16.7%;
 }
 
 #basemapToggleDiv {

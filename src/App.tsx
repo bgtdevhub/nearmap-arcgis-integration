@@ -9,6 +9,8 @@ import Search from '@arcgis/core/widgets/Search';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import LOD from '@arcgis/core/layers/support/LOD';
 import Point from '@arcgis/core/geometry/Point';
+import Compass from '@arcgis/core/widgets/Compass';
+import Locate from '@arcgis/core/widgets/Locate';
 // import LayerList from '@arcgis/core/widgets/LayerList';
 // import Swipe from '@arcgis/core/widgets/Swipe';
 // import Expand from '@arcgis/core/widgets/Expand';
@@ -128,7 +130,7 @@ const App = (): JSX.Element => {
     });
 
     wtl.on('layerview-create-error', () => {
-      wtl.load().catch((err) => console.log(err));
+      wtl.refresh();
     });
 
     return new Basemap({
@@ -178,19 +180,35 @@ const App = (): JSX.Element => {
         }
       }
     });
-    view.current.ui.move('zoom', 'bottom-left');
+
+    // widgets stuff
+    // move zoom
+    view.current.ui.move('zoom', 'manual');
 
     // create search
-    const search = new Search({
+    const searchWidget = new Search({
       view: view.current
     });
-    view.current.ui.add(search, 'top-left');
-    search.on('select-result', (e) => {
+    view.current.ui.add(searchWidget, 'top-left');
+    searchWidget.on('select-result', (e) => {
       setLonLat([
         e.result.extent.center.longitude,
         e.result.extent.center.latitude
       ]);
     });
+
+    // create compass
+    const compassWidget = new Compass({
+      view: view.current
+    });
+    view.current.ui.add(compassWidget, 'bottom-right');
+
+    // add locate
+    const locateWidget = new Locate({
+      view: view.current // Attaches the Locate button to the view
+    });
+
+    view.current.ui.add(locateWidget, 'manual');
 
     // // create a layerlist and expand widget and add to the view
     // const layerList = new LayerList({
