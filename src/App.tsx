@@ -68,6 +68,7 @@ const App = (): JSX.Element => {
       })
     );
   }
+
   interface nearmapCoverage {
     captureDate: string;
   }

@@ -85,7 +85,7 @@ const MapDatepicker = ({
   setMapDate,
   dateList
 }: DatePickerProps): JSX.Element => {
-  const [nextDisabled, setNextDisabled] = useState(false);
+  const [nextDisabled, setNextDisabled] = useState(true);
   const [prevDisabled, setPrevDisabled] = useState(false);
 
   // render years
@@ -104,13 +104,13 @@ const MapDatepicker = ({
   const navButtonState = (date: string): void => {
     const currentIndex = finalMenuItem.findIndex((i) => i === date);
     switch (true) {
-      // disable next button if last record, last should never be a year
+      // disable prev button if last record, last should never be a year
       case currentIndex === finalMenuItem.length - 1: {
         setNextDisabled(false);
         setPrevDisabled(true);
         break;
       }
-      // disable prev button if 2nd record, 1st should always be a year
+      // disable next button if 2nd record, 1st should always be a year
       case currentIndex === 1: {
         setNextDisabled(true);
         setPrevDisabled(false);
@@ -126,14 +126,14 @@ const MapDatepicker = ({
   };
 
   // get target date, next or previous function
-  const getTargetDate = (next = true): void => {
+  const getTargetDate = (prevDate = true): void => {
     const currentIndex = finalMenuItem.findIndex((i) => i === mapDate);
-    let targetIndex = next ? currentIndex - 1 : currentIndex + 1;
+    let targetIndex = prevDate ? currentIndex + 1 : currentIndex - 1;
     let finalDate = finalMenuItem[targetIndex];
 
     // skip year item
     if (finalDate.length === 4) {
-      targetIndex = next ? targetIndex - 1 : targetIndex + 1;
+      targetIndex = prevDate ? targetIndex + 1 : targetIndex - 1;
       finalDate = finalMenuItem[targetIndex];
     }
     setMapDate(finalDate);
@@ -147,7 +147,7 @@ const MapDatepicker = ({
 
   useEffect(() => {
     navButtonState(mapDate);
-  }, []);
+  }, [finalMenuItem]);
 
   return (
     <Box sx={{ justifySelf: 'center' }}>
@@ -155,7 +155,7 @@ const MapDatepicker = ({
         title="Previous Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(false)}
+        onClick={() => getTargetDate(true)}
         disabled={prevDisabled}
         sx={buttonStyle}
       >
@@ -200,7 +200,7 @@ const MapDatepicker = ({
         title="Next Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(true)}
+        onClick={() => getTargetDate(false)}
         disabled={nextDisabled}
         sx={buttonStyle}
       >
