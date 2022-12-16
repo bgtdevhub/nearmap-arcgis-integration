@@ -11,7 +11,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // import { useEffect } from 'react';
 
 interface DatePickerProps {
@@ -23,8 +23,7 @@ interface DatePickerProps {
 const buttonStyle = {
   backgroundColor: 'white',
   py: '8px',
-  mx: '-2px',
-  zIndex: 999,
+  mx: '-10px',
   outline: 'none',
   '&:hover': {
     backgroundColor: 'ghostwhite'
@@ -87,7 +86,7 @@ const MapDatepicker = ({
   dateList
 }: DatePickerProps): JSX.Element => {
   const [nextDisabled, setNextDisabled] = useState(false);
-  const [prevDisabled, setPrevDisabled] = useState(true);
+  const [prevDisabled, setPrevDisabled] = useState(false);
 
   // render years
   const yearList1 = dateList.map((y) => {
@@ -102,18 +101,19 @@ const MapDatepicker = ({
   const finalMenuItem = menuItem.flat();
 
   // change button disability, return target index
-  const navButtonState = (currentIndex: number): void => {
+  const navButtonState = (date: string): void => {
+    const currentIndex = finalMenuItem.findIndex((i) => i === date);
     switch (true) {
       // disable next button if last record, last should never be a year
       case currentIndex === finalMenuItem.length - 1: {
-        setNextDisabled(true);
-        setPrevDisabled(false);
+        setNextDisabled(false);
+        setPrevDisabled(true);
         break;
       }
       // disable prev button if 2nd record, 1st should always be a year
       case currentIndex === 1: {
-        setPrevDisabled(true);
-        setNextDisabled(false);
+        setNextDisabled(true);
+        setPrevDisabled(false);
         break;
       }
       // enable both next and prev button
@@ -128,30 +128,35 @@ const MapDatepicker = ({
   // get target date, next or previous function
   const getTargetDate = (next = true): void => {
     const currentIndex = finalMenuItem.findIndex((i) => i === mapDate);
-    let targetIndex = next ? currentIndex + 1 : currentIndex - 1;
+    let targetIndex = next ? currentIndex - 1 : currentIndex + 1;
+    let finalDate = finalMenuItem[targetIndex];
 
     // skip year item
-    if (finalMenuItem[targetIndex].length === 4) {
-      targetIndex = next ? targetIndex + 1 : targetIndex - 1;
+    if (finalDate.length === 4) {
+      targetIndex = next ? targetIndex - 1 : targetIndex + 1;
+      finalDate = finalMenuItem[targetIndex];
     }
-    setMapDate(finalMenuItem[targetIndex]);
-    navButtonState(targetIndex);
+    setMapDate(finalDate);
+    navButtonState(finalDate);
   };
 
   const handleDateChange = (e: SelectChangeEvent<string>): void => {
-    const currentIndex = finalMenuItem.findIndex((i) => i === e.target.value);
     setMapDate(e.target.value);
-    navButtonState(currentIndex);
+    navButtonState(e.target.value);
   };
 
+  useEffect(() => {
+    navButtonState(mapDate);
+  }, []);
+
   return (
-    <Box sx={{ gridColumn: '1/3', justifySelf: 'stretch' }}>
+    <Box sx={{ justifySelf: 'center' }}>
       <Button
         title="Previous Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(true)}
-        disabled={nextDisabled}
+        onClick={() => getTargetDate(false)}
+        disabled={prevDisabled}
         sx={buttonStyle}
       >
         <NavigateBeforeIcon />
@@ -166,6 +171,7 @@ const MapDatepicker = ({
           sx={{
             backgroundColor: 'white',
             fontWeight: 'bold',
+            zIndex: 999,
             borderRadius: '0px',
             '&& fieldset': {
               border: 'none'
@@ -194,8 +200,8 @@ const MapDatepicker = ({
         title="Next Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(false)}
-        disabled={prevDisabled}
+        onClick={() => getTargetDate(true)}
+        disabled={nextDisabled}
         sx={buttonStyle}
       >
         <NavigateNextIcon />

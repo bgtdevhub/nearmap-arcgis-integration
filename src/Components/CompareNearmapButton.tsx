@@ -9,7 +9,7 @@ interface compareProps {
 
 const CompareNearmapButton = ({ compare, set }: compareProps): JSX.Element => {
   return (
-    <Box sx={{ gridColumn: '5/5' }}>
+    <Box sx={{ justifySelf: 'center' }}>
       <Button
         aria-label="compare map"
         component="label"
