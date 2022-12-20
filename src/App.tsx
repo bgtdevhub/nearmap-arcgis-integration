@@ -6,10 +6,10 @@ import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
 import TileInfo from '@arcgis/core/layers/support/TileInfo';
-import Search from '@arcgis/core/widgets/Search';
-import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import LOD from '@arcgis/core/layers/support/LOD';
+import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import Point from '@arcgis/core/geometry/Point';
+import Search from '@arcgis/core/widgets/Search';
 import Compass from '@arcgis/core/widgets/Compass';
 import Locate from '@arcgis/core/widgets/Locate';
 import Swipe from '@arcgis/core/widgets/Swipe';
@@ -233,7 +233,12 @@ const App = (): JSX.Element => {
   const useMapDate = (date: string, isCompare = false): void => {
     useEffect(() => {
       const newMapLayer = generateWebTileLayer(date, isCompare);
+      // put compare map at back
       const index = isCompare ? 0 : 1;
+      // set compare map visibility to false when compare is false
+      if (!compare && isCompare) {
+        newMapLayer.visible = false;
+      }
       view.current?.map.add(newMapLayer, index);
 
       if (swipeWidgetRef.current !== undefined) {
@@ -258,7 +263,7 @@ const App = (): JSX.Element => {
           }
         }
       };
-    }, [date]);
+    }, [date, compare]);
   };
 
   // compare date

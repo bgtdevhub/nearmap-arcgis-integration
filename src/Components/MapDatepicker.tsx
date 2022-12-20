@@ -63,8 +63,8 @@ const renderMenuItem = (dateList: string[]): JSX.Element[] => {
             'linear-gradient(rgb(129, 129, 129), rgb(129, 129, 129))',
           backgroundSize: '2px 100%',
           backgroundRepeat: 'no-repeat',
-          backgroundPosition: '9%',
-          pr: '8rem'
+          backgroundPosition: '9.5%',
+          pr: '7rem'
         }}
       >
         <ListItemIcon>
