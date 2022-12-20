@@ -22,22 +22,22 @@ body,
   transform: translate(-50%);
 }
 
-.esri-zoom {
-  position: absolute;
-  right: 24px;
-  bottom: 9.2%;
-}
-
 .esri-compass {
   position: absolute;
   width: 50px;
   height: 50px;
 }
 
+.esri-zoom {
+  position: absolute;
+  right: 24px;
+  bottom: 85px;
+}
+
 .esri-locate {
   position: absolute;
   right: 24px;
-  bottom: 16.7%;
+  bottom: 153px;
 }
 
 #basemapToggleDiv {
