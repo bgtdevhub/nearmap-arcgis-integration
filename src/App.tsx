@@ -13,6 +13,7 @@ import Search from '@arcgis/core/widgets/Search';
 import Compass from '@arcgis/core/widgets/Compass';
 import Locate from '@arcgis/core/widgets/Locate';
 import Swipe from '@arcgis/core/widgets/Swipe';
+import { when } from '@arcgis/core/core/reactiveUtils';
 // import Basemap from '@arcgis/core/Basemap';
 // import BasemapToggle from '@arcgis/core/widgets/BasemapToggle'
 // import LayerList from '@arcgis/core/widgets/LayerList';
@@ -122,11 +123,12 @@ const App = (): JSX.Element => {
   const syncDates = (nmDateList: string[]): void => {
     if (dateList.join() !== nmDateList.join()) {
       setDateList(nmDateList);
-
-      if (!nmDateList.includes(mapDate)) {
-        setMapDate(nmDateList[0]);
-        setCompareDate(nmDateList[nmDateList.length - 1]);
-      }
+    }
+    if (!nmDateList.includes(mapDate)) {
+      setMapDate(nmDateList[0]);
+    }
+    if (!nmDateList.includes(compareDate)) {
+      setCompareDate(nmDateList[nmDateList.length - 1]);
     }
   };
 
@@ -182,12 +184,6 @@ const App = (): JSX.Element => {
       view: view.current
     });
     view.current.ui.add(searchWidget, 'top-left');
-    searchWidget.on('select-result', (e) => {
-      setLonLat([
-        e.result.extent.center.longitude,
-        e.result.extent.center.latitude
-      ]);
-    });
 
     // create compass
     const compassWidget = new Compass({
@@ -216,15 +212,15 @@ const App = (): JSX.Element => {
     // add the layer to the view
     map.add(nearmapSince);
 
-    // drag? set center back
-    view.current.on('drag', (e) => {
-      if (e.action === 'end') {
+    when(
+      () => view.current?.stationary === true,
+      () => {
         setLonLat([
           view.current?.center.longitude as number,
           view.current?.center.latitude as number
         ]);
       }
-    });
+    );
 
     view.current
       .when(() => {
