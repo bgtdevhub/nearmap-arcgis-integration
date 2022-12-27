@@ -20,12 +20,34 @@ import Swipe from '@arcgis/core/widgets/Swipe';
 
 import MapDatepicker from './Components/MapDatepicker';
 import CompareNearmapButton from './Components/CompareNearmapButton';
-import { lat2tile, lon2tile } from './Components/Utils';
+import {
+  addSwipeLayer,
+  generateTileID,
+  lat2tile,
+  lon2tile,
+  removeSwipeLayer
+} from './Components/Utils';
 
 import './App.css';
+import {
+  direction,
+  nApiKey,
+  nearmapMaxZoom,
+  nearmapMinZoom,
+  tileURL,
+  opacity,
+  originZoom,
+  origin,
+  initialResolution,
+  inchesPerMeter,
+  coverageURL
+} from './parameter';
+
+interface nearmapCoverage {
+  captureDate: string;
+}
 
 const App = (): JSX.Element => {
-  // User Input Parameters
   const dateToday = format(new Date(), 'yyyy-MM-dd');
   const mapRef = useRef<any>();
   const swipeWidgetRef = useRef<Swipe>();
@@ -33,16 +55,6 @@ const App = (): JSX.Element => {
 
   // esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
   esriConfig.request.timeout = 90000;
-  const nApiKey: string = import.meta.env.VITE_NEARMAP_KEY; // "NEARMAP_API_KEY_GOES_HERE"
-  const tileURL = 'https://api.nearmap.com/tiles/v3';
-  const direction = 'Vert'; // Options: 'Vert', 'North', // Note: awaiting fix from esri to support E, W, S
-  const origin = [-97.75, 30.269135]; // [Lat, Lon] for Location: ex: Austin, TX
-  const originZoom = 17; // Starting Zoom level for the Web Map
-  const nearmapMinZoom = 17; // Nearmap Imagery Lowest resolution zoom level the user can view
-  const nearmapMaxZoom = 24; // Nearmap Imagery Highest resolution zoom level the user can view
-  const opacity = 1; // Range of 0.1 to 1.0
-  // const blendMode = 'darken'; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
-
   const [mapDate, setMapDate] = useState(dateToday);
   const [dateList, setDateList] = useState([dateToday]);
   const [lonLat, setLonLat] = useState(origin);
@@ -53,10 +65,6 @@ const App = (): JSX.Element => {
   // By default ArcGIS SDK only goes to zoom level 19,
   // In order to overcome this, we need to add more Level Of Detail (LOD) entries to both the view and the web tile layer
   const lods: LOD[] = [];
-  const tilesize = 256;
-  const earthCircumference = 40075016.685568;
-  const inchesPerMeter = 39.37;
-  const initialResolution = earthCircumference / tilesize;
   for (let zoom = nearmapMinZoom; zoom <= nearmapMaxZoom; zoom++) {
     const resolution = initialResolution / Math.pow(2, zoom);
     const scale = resolution * 96 * inchesPerMeter;
@@ -68,35 +76,6 @@ const App = (): JSX.Element => {
       })
     );
   }
-
-  interface nearmapCoverage {
-    captureDate: string;
-  }
-
-  // fetch list of capture date based on origin
-  useEffect(() => {
-    const originLon = lon2tile(lonLat[0], originZoom);
-    const originLat = lat2tile(lonLat[1], originZoom);
-
-    fetch(
-      `https://api.nearmap.com/coverage/v2/coord/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=50`
-    )
-      .then(async (response) => await response.json())
-      .then((data) => {
-        const nmDateList: string[] = data.surveys.map(
-          (d: nearmapCoverage) => d.captureDate
-        );
-        if (dateList.join() !== nmDateList.join()) {
-          setDateList(nmDateList);
-
-          if (!nmDateList.includes(mapDate)) {
-            setMapDate(nmDateList[0]);
-            setCompareDate(nmDateList[nmDateList.length - 1]);
-          }
-        }
-      })
-      .catch((err) => console.log(err));
-  }, [originZoom, lonLat]);
 
   // Create a tileinfo instance with increased level of detail
   // using the lod array we created earlier
@@ -113,11 +92,6 @@ const App = (): JSX.Element => {
     spatialReference: SpatialReference.WebMercator,
     size: [256, 256]
   });
-
-  // generate tile ID
-  const generateTileID = (date: string, isCompare = false): string => {
-    return isCompare ? `compare-${date}` : date;
-  };
 
   // generate web tile layer
   const generateWebTileLayer = (
@@ -143,6 +117,36 @@ const App = (): JSX.Element => {
 
     return wtl;
   };
+
+  // sync date function for new date list
+  const syncDates = (nmDateList: string[]): void => {
+    if (dateList.join() !== nmDateList.join()) {
+      setDateList(nmDateList);
+
+      if (!nmDateList.includes(mapDate)) {
+        setMapDate(nmDateList[0]);
+        setCompareDate(nmDateList[nmDateList.length - 1]);
+      }
+    }
+  };
+
+  // fetch list of capture date based on origin
+  useEffect(() => {
+    const originLon = lon2tile(lonLat[0], originZoom);
+    const originLat = lat2tile(lonLat[1], originZoom);
+
+    fetch(
+      `${coverageURL}/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=50`
+    )
+      .then(async (response) => await response.json())
+      .then((data) => {
+        const nmDateList: string[] = data.surveys.map(
+          (d: nearmapCoverage) => d.captureDate
+        );
+        syncDates(nmDateList);
+      })
+      .catch((err) => console.log(err));
+  }, [originZoom, lonLat]);
 
   // run on mount
   useEffect(() => {
@@ -242,11 +246,7 @@ const App = (): JSX.Element => {
       view.current?.map.add(newMapLayer, index);
 
       if (swipeWidgetRef.current !== undefined) {
-        if (isCompare) {
-          swipeWidgetRef.current.trailingLayers.add(newMapLayer);
-        } else {
-          swipeWidgetRef.current.leadingLayers.add(newMapLayer);
-        }
+        addSwipeLayer(isCompare, newMapLayer, swipeWidgetRef.current);
       }
 
       return () => {
@@ -256,11 +256,7 @@ const App = (): JSX.Element => {
         view.current?.map.removeMany(oldLayers);
 
         if (swipeWidgetRef.current !== undefined) {
-          if (isCompare) {
-            swipeWidgetRef.current.trailingLayers.removeAll();
-          } else {
-            swipeWidgetRef.current.leadingLayers.removeAll();
-          }
+          removeSwipeLayer(isCompare, swipeWidgetRef.current);
         }
       };
     }, [date, compare]);

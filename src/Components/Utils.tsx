@@ -17,3 +17,33 @@ export const lat2tile = (lat: number, zoom: number): number => {
       Math.pow(2, zoom)
   );
 };
+
+// generate tile ID
+export const generateTileID = (date: string, isCompare = false): string => {
+  return isCompare ? `compare-${date}` : date;
+};
+
+// add web layer for swipe widget
+export const addSwipeLayer = (
+  isCompare: boolean,
+  layer: __esri.WebTileLayer,
+  swipe: __esri.Swipe
+): void => {
+  if (isCompare) {
+    swipe.trailingLayers.add(layer);
+  } else {
+    swipe.leadingLayers.add(layer);
+  }
+};
+
+// remove web layer for swipe widget
+export const removeSwipeLayer = (
+  isCompare: boolean,
+  swipe: __esri.Swipe
+): void => {
+  if (isCompare) {
+    swipe.trailingLayers.removeAll();
+  } else {
+    swipe.leadingLayers.removeAll();
+  }
+};
