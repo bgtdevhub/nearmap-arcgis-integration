@@ -12,6 +12,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import { useState, useEffect } from 'react';
+import './index.css';
 // import { useEffect } from 'react';
 
 interface DatePickerProps {
@@ -19,22 +20,6 @@ interface DatePickerProps {
   setMapDate: any;
   dateList: string[];
 }
-
-const buttonStyle = {
-  backgroundColor: 'white',
-  py: '8px',
-  mx: '-10px',
-  outline: 'none',
-  '&:hover': {
-    backgroundColor: 'ghostwhite'
-  },
-  '&:focus': {
-    outline: 'none'
-  },
-  '&:focusVisible': {
-    outline: 'none'
-  }
-};
 
 const renderSelectedDate = (date: string): string => {
   const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
@@ -46,7 +31,7 @@ const renderMenuItem = (dateList: string[]): JSX.Element[] => {
     // check for year
     if (d.length === 4) {
       return (
-        <ListSubheader key={d} sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+        <ListSubheader key={d} className="list-header">
           {d}
         </ListSubheader>
       );
@@ -55,26 +40,15 @@ const renderMenuItem = (dateList: string[]): JSX.Element[] => {
     const formatDate = format(parsedDate, 'MMMM dd');
 
     return (
-      <MenuItem
-        key={d}
-        value={d}
-        sx={{
-          backgroundImage:
-            'linear-gradient(rgb(129, 129, 129), rgb(129, 129, 129))',
-          backgroundSize: '2px 100%',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: '9.5%',
-          pr: '7rem'
-        }}
-      >
+      <MenuItem key={d} value={d} className="middle-line">
         <ListItemIcon>
           <TripOriginOutlinedIcon
             fontSize="small"
             color="action"
-            sx={{ padding: '2px', background: 'white', borderRadius: '50%' }}
+            className="dropdown-icon"
           />
         </ListItemIcon>
-        <ListItemText>{formatDate}</ListItemText>
+        <ListItemText className="mobile-display-map">{formatDate}</ListItemText>
       </MenuItem>
     );
   });
@@ -150,14 +124,14 @@ const MapDatepicker = ({
   }, [finalMenuItem]);
 
   return (
-    <Box sx={{ justifySelf: 'center' }}>
+    <Box className="date-grid">
       <Button
         title="Previous Date"
         variant="text"
         color="inherit"
         onClick={() => getTargetDate(true)}
         disabled={prevDisabled}
-        sx={buttonStyle}
+        className="nav-button prev-button"
       >
         <NavigateBeforeIcon />
       </Button>
@@ -168,15 +142,7 @@ const MapDatepicker = ({
           value={mapDate}
           label="Map Date"
           onChange={handleDateChange}
-          sx={{
-            backgroundColor: 'white',
-            fontWeight: 'bold',
-            zIndex: 999,
-            borderRadius: '0px',
-            '&& fieldset': {
-              border: 'none'
-            }
-          }}
+          className="dropdown-date-button"
           MenuProps={{
             anchorOrigin: {
               vertical: 'bottom',
@@ -186,12 +152,13 @@ const MapDatepicker = ({
               vertical: 515,
               horizontal: 'center'
             },
-            sx: {
-              maxHeight: '500px'
-            }
+            className: 'dropdown-menu'
           }}
           IconComponent={() => null}
           renderValue={(s) => renderSelectedDate(s)}
+          SelectDisplayProps={{
+            className: 'mobile-display'
+          }}
         >
           {renderMenuItem(finalMenuItem)}
         </Select>
@@ -202,7 +169,7 @@ const MapDatepicker = ({
         color="inherit"
         onClick={() => getTargetDate(false)}
         disabled={nextDisabled}
-        sx={buttonStyle}
+        className="nav-button next-button"
       >
         <NavigateNextIcon />
       </Button>

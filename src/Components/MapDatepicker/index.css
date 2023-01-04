@@ -1,0 +1,110 @@
+.date-grid {
+  justify-self: center;
+  grid-row: 2 / 2;
+}
+
+.nav-button {
+  background-color: white !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  outline: none !important;
+}
+
+.nav-button :hover {
+  background-color: ghostwhite !important;
+}
+
+.nav-button :focus {
+  outline: none !important;
+}
+
+.nav-button :focus-visible {
+  outline: none !important;
+}
+
+.prev-button {
+  border-radius: 2px 0 0 2px;
+  margin-right: -10px !important;
+}
+
+.next-button {
+  border-radius: 0 2px 2px 0;
+  margin-left: -10px !important;
+}
+
+.list-header {
+  font-weight: bold !important;
+  font-size: 1rem !important;
+}
+
+.middle-line {
+  background-image: linear-gradient(rgb(129, 129, 129), rgb(129, 129, 129));
+  background-size: 2px 100%;
+  background-repeat: no-repeat;
+  background-position: 9.5%;
+  padding-right: 7rem !important;
+}
+
+.dropdown-icon {
+  padding: 2px;
+  background: white;
+  border-radius: 50%;
+}
+
+.dropdown-menu {
+  max-height: 500px;
+}
+
+.dropdown-date-button {
+  background-color: white;
+  font-weight: bold !important;
+  z-index: 999;
+  border-radius: 0 !important;
+}
+
+.dropdown-date-button fieldset {
+  border: none !important;
+}
+
+@media screen and (max-width: 480px) {
+  .nav-button {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    min-width: 10px !important;
+    margin-right: 0px !important;
+    margin-left: 0px !important;
+    height: 54px;
+  }
+
+  .prev-button {
+    margin-right: -2px !important;
+  }
+
+  .next-button {
+    margin-left: -2px !important;
+  }
+
+  .dropdown-date-button {
+    font-size: small !important;
+    white-space: initial !important;
+    padding: 0 !important;
+  }
+
+  .mobile-display {
+    width: 80px !important;
+    white-space: initial !important;
+    text-align: center;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    height: auto;
+  }
+
+  .middle-line {
+    background-position: 16%;
+    padding-right: 0 !important;
+  }
+
+  .mobile-display-map {
+    font-size: small !important;
+  }
+}

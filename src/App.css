@@ -46,3 +46,28 @@ body,
   right: 20px;
   z-index: 50;
 }
+
+.grid-nav {
+  display: grid;
+  grid-template-columns: 300px 50px 300px;
+  margin-bottom: 0.5rem;
+  column-gap: 2px;
+  row-gap: 2px;
+}
+
+.nmapactive-button {
+  justify-self: center;
+  grid-column: 2 / 2;
+  grid-row: 1 / 1;
+}
+
+@media screen and (max-width: 480px) {
+  .grid-nav {
+    display: grid;
+    grid-template-columns: 130px 40px 130px;
+  }
+
+  #mapDatePicker {
+    left: 42.1%;
+  }
+}

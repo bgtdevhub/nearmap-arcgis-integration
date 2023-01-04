@@ -14,13 +14,15 @@ import Compass from '@arcgis/core/widgets/Compass';
 import Locate from '@arcgis/core/widgets/Locate';
 import Swipe from '@arcgis/core/widgets/Swipe';
 import { when } from '@arcgis/core/core/reactiveUtils';
+import Alert from '@mui/material/Alert';
+import Switch from '@mui/material/Switch';
 // import Basemap from '@arcgis/core/Basemap';
 // import BasemapToggle from '@arcgis/core/widgets/BasemapToggle'
-// import LayerList from '@arcgis/core/widgets/LayerList';
-// import Expand from '@arcgis/core/widgets/Expand';
+import LayerList from '@arcgis/core/widgets/LayerList';
+import Expand from '@arcgis/core/widgets/Expand';
 
 import MapDatepicker from './Components/MapDatepicker';
-import CompareNearmapButton from './Components/CompareNearmapButton';
+import CompareNearmapButton from './Components/CompareNearmap';
 import {
   addSwipeLayer,
   generateTileID,
@@ -61,6 +63,8 @@ const App = (): JSX.Element => {
   const [lonLat, setLonLat] = useState(origin);
   const [compareDate, setCompareDate] = useState(dateToday);
   const [compare, setCompare] = useState(false);
+  const [nmapActive, setNmapActive] = useState(false);
+  const [nmapDisable, setNmapDisable] = useState(false);
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -142,10 +146,15 @@ const App = (): JSX.Element => {
     )
       .then(async (response) => await response.json())
       .then((data) => {
-        const nmDateList: string[] = data.surveys.map(
-          (d: nearmapCoverage) => d.captureDate
-        );
-        syncDates(nmDateList);
+        if (data.surveys.length === 0) {
+          setNmapDisable(true);
+        } else {
+          setNmapDisable(false);
+          const nmDateList: string[] = data.surveys.map(
+            (d: nearmapCoverage) => d.captureDate
+          );
+          syncDates(nmDateList);
+        }
       })
       .catch((err) => console.log(err));
   }, [originZoom, lonLat]);
@@ -154,7 +163,7 @@ const App = (): JSX.Element => {
   useEffect(() => {
     const nearmapSince = generateWebTileLayer(mapDate);
 
-    const map = new Map();
+    const map = new Map({ basemap: 'streets-vector' });
 
     view.current = new MapView({
       container: mapRef.current,
@@ -198,16 +207,16 @@ const App = (): JSX.Element => {
 
     view.current.ui.add(locateWidget, 'manual');
 
-    // // create a layerlist and expand widget and add to the view
-    // const layerList = new LayerList({
-    //   view: view.current
-    // });
-    // const llExpand = new Expand({
-    //   view: view.current,
-    //   content: layerList,
-    //   expanded: true
-    // });
-    // view.current.ui.add(llExpand, 'top-right');
+    // create a layerlist and expand widget and add to the view
+    const layerList = new LayerList({
+      view: view.current
+    });
+    const llExpand = new Expand({
+      view: view.current,
+      content: layerList,
+      expanded: false
+    });
+    view.current.ui.add(llExpand, 'top-right');
 
     // add the layer to the view
     map.add(nearmapSince);
@@ -236,7 +245,7 @@ const App = (): JSX.Element => {
       // put compare map at back
       const index = isCompare ? 0 : 1;
       // set compare map visibility to false when compare is false
-      if (!compare && isCompare) {
+      if (!nmapActive || (!compare && isCompare)) {
         newMapLayer.visible = false;
       }
       view.current?.map.add(newMapLayer, index);
@@ -255,7 +264,7 @@ const App = (): JSX.Element => {
           removeSwipeLayer(isCompare, swipeWidgetRef.current);
         }
       };
-    }, [date, compare]);
+    }, [date, compare, nmapActive]);
   };
 
   // compare date
@@ -288,25 +297,42 @@ const App = (): JSX.Element => {
     };
   }, [compare]);
 
+  const handleNmapActive = (): void => {
+    setNmapActive(!nmapActive);
+    if (compare) setCompare(false);
+  };
+
   return (
     <>
       <div id="viewDiv" ref={mapRef}></div>
       <div id="mapDatePicker">
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '300px 50px 300px',
-            mb: '0.5rem',
-            columnGap: 1
-          }}
-        >
-          <MapDatepicker
-            mapDate={mapDate}
-            setMapDate={setMapDate}
-            dateList={dateList}
-          />
-          <CompareNearmapButton compare={compare} set={setCompare} />
-          {compare && (
+        <Box className="grid-nav">
+          <Box className="nmapactive-button">
+            <Switch
+              checked={nmapActive}
+              disabled={nmapDisable}
+              onChange={handleNmapActive}
+              sx={{ backgroundColor: 'white', borderRadius: 2 }}
+            />
+          </Box>
+          {nmapDisable && (
+            <Alert severity="info">No nearmap data found for this area</Alert>
+          )}
+          {!nmapDisable && [
+            <MapDatepicker
+              key="mapDate"
+              mapDate={mapDate}
+              setMapDate={setMapDate}
+              dateList={dateList}
+            />,
+            <CompareNearmapButton
+              key="compareButton"
+              compare={compare}
+              set={setCompare}
+              disabled={!nmapActive}
+            />
+          ]}
+          {!nmapDisable && compare && (
             <MapDatepicker
               mapDate={compareDate}
               setMapDate={setCompareDate}

@@ -1,0 +1,19 @@
+.compare-grid {
+  justify-self: center;
+  grid-column: 2 / 2;
+  grid-row: 2 / 2;
+}
+
+.compare-button {
+  background-color: white;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+@media screen and (max-width: 480px) {
+  .compare-button {
+    min-width: 20px !important;
+    height: 54px;
+    width: 40px;
+  }
+}
