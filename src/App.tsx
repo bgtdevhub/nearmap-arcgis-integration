@@ -142,7 +142,7 @@ const App = (): JSX.Element => {
     const originLat = lat2tile(lonLat[1], originZoom);
 
     fetch(
-      `${coverageURL}/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=50`
+      `${coverageURL}/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=500`
     )
       .then(async (response) => await response.json())
       .then((data) => {
@@ -153,7 +153,8 @@ const App = (): JSX.Element => {
           const nmDateList: string[] = data.surveys.map(
             (d: nearmapCoverage) => d.captureDate
           );
-          syncDates(nmDateList);
+          const finalDateList = [...new Set(nmDateList)];
+          syncDates(finalDateList);
         }
       })
       .catch((err) => console.log(err));
