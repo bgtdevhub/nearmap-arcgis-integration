@@ -52,9 +52,6 @@ interface nearmapCoverage {
 
 const App = (): JSX.Element => {
   const dateToday = format(new Date(), 'yyyy-MM-dd');
-  const mapRef = useRef<any>();
-  const swipeWidgetRef = useRef<Swipe>();
-  const view = useRef<MapView>();
 
   // esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
   esriConfig.request.timeout = 90000;
@@ -65,6 +62,21 @@ const App = (): JSX.Element => {
   const [compare, setCompare] = useState(false);
   const [nmapActive, setNmapActive] = useState(false);
   const [nmapDisable, setNmapDisable] = useState(false);
+
+  const mapRef = useRef<any>();
+  const swipeWidgetRef = useRef<Swipe>();
+  const view = useRef<MapView>();
+  const compareRef = useRef(compare);
+
+  const handleCompare = (value: boolean): void => {
+    setCompare(value);
+    compareRef.current = value;
+  };
+
+  const handleNmapActive = (): void => {
+    setNmapActive(!nmapActive);
+    if (compare) handleCompare(false);
+  };
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -246,7 +258,7 @@ const App = (): JSX.Element => {
       // put compare map at back
       const index = isCompare ? 0 : 1;
       // set compare map visibility to false when compare is false
-      if (!nmapActive || (!compare && isCompare)) {
+      if (!compareRef.current && isCompare) {
         newMapLayer.visible = false;
       }
       view.current?.map.add(newMapLayer, index);
@@ -262,10 +274,11 @@ const App = (): JSX.Element => {
         view.current?.map.removeMany(oldLayers);
 
         if (swipeWidgetRef.current !== undefined) {
+          console.log('remove layer!');
           removeSwipeLayer(isCompare, swipeWidgetRef.current);
         }
       };
-    }, [date, compare, nmapActive]);
+    }, [date]);
   };
 
   // compare date
@@ -275,11 +288,12 @@ const App = (): JSX.Element => {
 
   // compare function
   useEffect(() => {
-    const nearmapLead: any = view.current?.map.findLayerById(mapDate);
-    const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
-      cp.id.includes('compare')
-    );
     if (compare) {
+      const nearmapLead: any = view.current?.map.findLayerById(mapDate);
+      const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
+        cp.id.includes('compare')
+      );
+      nearmapTrail.visible = true;
       // create a new Swipe widget
       const swipe = new Swipe({
         leadingLayers: [nearmapLead],
@@ -292,16 +306,20 @@ const App = (): JSX.Element => {
       view.current?.ui.add(swipe);
     }
     return () => {
+      const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
+        cp.id.includes('compare')
+      );
+      if (nearmapTrail !== undefined) nearmapTrail.visible = false;
       if (swipeWidgetRef.current !== undefined) {
         swipeWidgetRef.current.destroy();
       }
     };
   }, [compare]);
 
-  const handleNmapActive = (): void => {
-    setNmapActive(!nmapActive);
-    if (compare) setCompare(false);
-  };
+  useEffect(() => {
+    const nearmapLead: any = view.current?.map.findLayerById(mapDate);
+    nearmapLead.visible = nmapActive;
+  }, [nmapActive, mapDate]);
 
   return (
     <>
@@ -330,7 +348,7 @@ const App = (): JSX.Element => {
               <CompareNearmapButton
                 key="compareButton"
                 compare={compare}
-                set={setCompare}
+                set={handleCompare}
                 disabled={!nmapActive}
               />
             ]}
