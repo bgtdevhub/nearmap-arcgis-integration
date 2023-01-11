@@ -319,20 +319,21 @@ const App = (): JSX.Element => {
           {nmapDisable && (
             <Alert severity="info">No nearmap data found for this area</Alert>
           )}
-          {!nmapDisable && [
-            <MapDatepicker
-              key="mapDate"
-              mapDate={mapDate}
-              setMapDate={setMapDate}
-              dateList={dateList}
-            />,
-            <CompareNearmapButton
-              key="compareButton"
-              compare={compare}
-              set={setCompare}
-              disabled={!nmapActive}
-            />
-          ]}
+          {!nmapDisable &&
+            nmapActive && [
+              <MapDatepicker
+                key="mapDate"
+                mapDate={mapDate}
+                setMapDate={setMapDate}
+                dateList={dateList}
+              />,
+              <CompareNearmapButton
+                key="compareButton"
+                compare={compare}
+                set={setCompare}
+                disabled={!nmapActive}
+              />
+            ]}
           {!nmapDisable && compare && (
             <MapDatepicker
               mapDate={compareDate}
