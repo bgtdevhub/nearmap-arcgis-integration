@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import format from 'date-fns/format';
 import esriConfig from '@arcgis/core/config';
@@ -16,8 +16,6 @@ import Swipe from '@arcgis/core/widgets/Swipe';
 import { when } from '@arcgis/core/core/reactiveUtils';
 import Alert from '@mui/material/Alert';
 import Switch from '@mui/material/Switch';
-// import Basemap from '@arcgis/core/Basemap';
-// import BasemapToggle from '@arcgis/core/widgets/BasemapToggle'
 import LayerList from '@arcgis/core/widgets/LayerList';
 import Expand from '@arcgis/core/widgets/Expand';
 
@@ -46,14 +44,13 @@ import {
   coverageURL
 } from './parameter';
 
-interface nearmapCoverage {
+interface NearmapCoverage {
   captureDate: string;
 }
 
 const App = (): JSX.Element => {
   const dateToday = format(new Date(), 'yyyy-MM-dd');
 
-  // esriConfig.apiKey = import.meta.env.VITE_ARCGIS_KEY;
   esriConfig.request.timeout = 90000;
   const [mapDate, setMapDate] = useState(dateToday);
   const [dateList, setDateList] = useState([dateToday]);
@@ -81,18 +78,22 @@ const App = (): JSX.Element => {
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
   // In order to overcome this, we need to add more Level Of Detail (LOD) entries to both the view and the web tile layer
-  const lods: LOD[] = [];
-  for (let zoom = nearmapMinZoom; zoom <= nearmapMaxZoom; zoom++) {
-    const resolution = initialResolution / Math.pow(2, zoom);
-    const scale = resolution * 96 * inchesPerMeter;
-    lods.push(
-      new LOD({
-        level: zoom,
-        scale,
-        resolution
-      })
-    );
-  }
+  const getLods = useCallback(() => {
+    const lods: LOD[] = [];
+    for (let zoom = nearmapMinZoom; zoom <= nearmapMaxZoom; zoom++) {
+      const resolution = initialResolution / Math.pow(2, zoom);
+      const scale = resolution * 96 * inchesPerMeter;
+      lods.push(
+        new LOD({
+          level: zoom,
+          scale,
+          resolution
+        })
+      );
+    }
+
+    return lods;
+  }, []);
 
   // Create a tileinfo instance with increased level of detail
   // using the lod array we created earlier
@@ -101,7 +102,7 @@ const App = (): JSX.Element => {
   const tileInfo = new TileInfo({
     dpi: 72,
     format: 'jpg',
-    lods,
+    lods: getLods(),
     origin: new Point({
       x: -20037508.342787,
       y: 20037508.342787
@@ -136,17 +137,20 @@ const App = (): JSX.Element => {
   };
 
   // sync date function for new date list
-  const syncDates = (nmDateList: string[]): void => {
-    if (dateList.join() !== nmDateList.join()) {
-      setDateList(nmDateList);
-    }
-    if (!nmDateList.includes(mapDate)) {
-      setMapDate(nmDateList[0]);
-    }
-    if (!nmDateList.includes(compareDate)) {
-      setCompareDate(nmDateList[nmDateList.length - 1]);
-    }
-  };
+  const syncDates = useCallback(
+    (nmDateList: string[]): void => {
+      if (dateList.join() !== nmDateList.join()) {
+        setDateList(nmDateList);
+      }
+      if (!nmDateList.includes(mapDate)) {
+        setMapDate(nmDateList[0]);
+      }
+      if (!nmDateList.includes(compareDate)) {
+        setCompareDate(nmDateList[nmDateList.length - 1]);
+      }
+    },
+    [compareDate, dateList, mapDate]
+  );
 
   // fetch list of capture date based on origin
   useEffect(() => {
@@ -163,19 +167,17 @@ const App = (): JSX.Element => {
         } else {
           setNmapDisable(false);
           const nmDateList: string[] = data.surveys.map(
-            (d: nearmapCoverage) => d.captureDate
+            (d: NearmapCoverage) => d.captureDate
           );
           const finalDateList = [...new Set(nmDateList)];
           syncDates(finalDateList);
         }
       })
       .catch((err) => console.log(err));
-  }, [originZoom, lonLat]);
+  }, [lonLat, syncDates]);
 
   // run on mount
   useEffect(() => {
-    const nearmapSince = generateWebTileLayer(mapDate);
-
     const map = new Map({ basemap: 'streets-vector' });
 
     view.current = new MapView({
@@ -184,7 +186,7 @@ const App = (): JSX.Element => {
       zoom: originZoom - nearmapMinZoom,
       center: origin,
       constraints: {
-        lods,
+        lods: getLods(),
         // minZoom: nearmapMinZoom,
         maxZoom: nearmapMaxZoom
       },
@@ -231,11 +233,9 @@ const App = (): JSX.Element => {
     });
     view.current.ui.add(llExpand, 'top-right');
 
-    // add the layer to the view
-    map.add(nearmapSince);
-
     when(
-      () => view.current?.stationary === true,
+      () =>
+        view.current?.stationary === true || view.current?.updating === false,
       () => {
         setLonLat([
           view.current?.center.longitude as number,
@@ -249,7 +249,7 @@ const App = (): JSX.Element => {
         console.log('MapView is ready.');
       })
       .catch((err) => console.log(err));
-  }, []);
+  }, [getLods]);
 
   // date change hook
   const useMapDate = (date: string, isCompare = false): void => {
@@ -278,7 +278,7 @@ const App = (): JSX.Element => {
           removeSwipeLayer(isCompare, swipeWidgetRef.current);
         }
       };
-    }, [date]);
+    }, [date, isCompare]);
   };
 
   // compare date
@@ -289,11 +289,14 @@ const App = (): JSX.Element => {
   // compare function
   useEffect(() => {
     if (compare) {
-      const nearmapLead: any = view.current?.map.findLayerById(mapDate);
+      const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
+        bs.id.includes('base-')
+      );
       const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
         cp.id.includes('compare')
       );
       nearmapTrail.visible = true;
+
       // create a new Swipe widget
       const swipe = new Swipe({
         leadingLayers: [nearmapLead],
@@ -307,7 +310,7 @@ const App = (): JSX.Element => {
     }
     return () => {
       const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
-        cp.id.includes('compare')
+        cp.id.includes('compare-')
       );
       if (nearmapTrail !== undefined) nearmapTrail.visible = false;
       if (swipeWidgetRef.current !== undefined) {
@@ -317,7 +320,9 @@ const App = (): JSX.Element => {
   }, [compare]);
 
   useEffect(() => {
-    const nearmapLead: any = view.current?.map.findLayerById(mapDate);
+    const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
+      bs.id.includes('base-')
+    );
     nearmapLead.visible = nmapActive;
   }, [nmapActive, mapDate]);
 

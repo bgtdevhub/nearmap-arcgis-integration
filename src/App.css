@@ -52,7 +52,7 @@ body,
   grid-template-columns: 300px 50px 300px;
   margin-bottom: 0.5rem;
   column-gap: 2px;
-  row-gap: 2px;
+  row-gap: 7px;
 }
 
 .nmapactive-button {

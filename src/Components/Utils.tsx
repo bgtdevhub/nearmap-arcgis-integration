@@ -20,7 +20,7 @@ export const lat2tile = (lat: number, zoom: number): number => {
 
 // generate tile ID
 export const generateTileID = (date: string, isCompare = false): string => {
-  return isCompare ? `compare-${date}` : date;
+  return isCompare ? `compare-${date}` : `base-${date}`;
 };
 
 // add web layer for swipe widget

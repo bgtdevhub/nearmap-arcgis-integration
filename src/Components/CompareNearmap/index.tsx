@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import CompareIcon from '@mui/icons-material/Compare';
 import './index.css';
 
-interface compareProps {
+interface CompareProps {
   compare: boolean;
   set: any;
   disabled: boolean;
@@ -13,7 +13,7 @@ const CompareNearmapButton = ({
   compare,
   set,
   disabled
-}: compareProps): JSX.Element => {
+}: CompareProps): JSX.Element => {
   return (
     <Box className="compare-grid">
       <Button
@@ -21,7 +21,6 @@ const CompareNearmapButton = ({
         component="label"
         onClick={() => {
           set(!compare);
-          // console.log(compare);
         }}
         size="small"
         variant="contained"

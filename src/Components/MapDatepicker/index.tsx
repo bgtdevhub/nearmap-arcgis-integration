@@ -11,9 +11,8 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './index.css';
-// import { useEffect } from 'react';
 
 interface DatePickerProps {
   mapDate: string;
@@ -75,29 +74,32 @@ const MapDatepicker = ({
   const finalMenuItem = menuItem.flat();
 
   // change button disability, return target index
-  const navButtonState = (date: string): void => {
-    const currentIndex = finalMenuItem.findIndex((i) => i === date);
-    switch (true) {
-      // disable prev button if last record, last should never be a year
-      case currentIndex === finalMenuItem.length - 1: {
-        setNextDisabled(false);
-        setPrevDisabled(true);
-        break;
+  const navButtonState = useCallback(
+    (date: string): void => {
+      const currentIndex = finalMenuItem.findIndex((i) => i === date);
+      switch (true) {
+        // disable prev button if last record, last should never be a year
+        case currentIndex === finalMenuItem.length - 1: {
+          setNextDisabled(false);
+          setPrevDisabled(true);
+          break;
+        }
+        // disable next button if 2nd record, 1st should always be a year
+        case currentIndex === 1: {
+          setNextDisabled(true);
+          setPrevDisabled(false);
+          break;
+        }
+        // enable both next and prev button
+        default: {
+          setNextDisabled(false);
+          setPrevDisabled(false);
+          break;
+        }
       }
-      // disable next button if 2nd record, 1st should always be a year
-      case currentIndex === 1: {
-        setNextDisabled(true);
-        setPrevDisabled(false);
-        break;
-      }
-      // enable both next and prev button
-      default: {
-        setNextDisabled(false);
-        setPrevDisabled(false);
-        break;
-      }
-    }
-  };
+    },
+    [finalMenuItem]
+  );
 
   // get target date, next or previous function
   const getTargetDate = (prevDate = true): void => {
@@ -121,7 +123,7 @@ const MapDatepicker = ({
 
   useEffect(() => {
     navButtonState(mapDate);
-  }, [finalMenuItem]);
+  }, [finalMenuItem, navButtonState, mapDate]);
 
   return (
     <Box className="date-grid">
