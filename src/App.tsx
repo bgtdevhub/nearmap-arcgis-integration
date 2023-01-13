@@ -99,41 +99,76 @@ const App = (): JSX.Element => {
   // using the lod array we created earlier
   // We need to use rows and cols (currently undocumented in https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-support-TileInfo.html)
   // in addition to width and height properties
-  const tileInfo = new TileInfo({
-    dpi: 72,
-    format: 'jpg',
-    lods: getLods(),
-    origin: new Point({
-      x: -20037508.342787,
-      y: 20037508.342787
-    }),
-    spatialReference: SpatialReference.WebMercator,
-    size: [256, 256]
-  });
+  const getTileInfo = useCallback(() => {
+    const tileInfo = new TileInfo({
+      dpi: 72,
+      format: 'jpg',
+      lods: getLods(),
+      origin: new Point({
+        x: -20037508.342787,
+        y: 20037508.342787
+      }),
+      spatialReference: SpatialReference.WebMercator,
+      size: [256, 256]
+    });
+    return tileInfo;
+  }, [getLods]);
 
   // generate web tile layer
-  const generateWebTileLayer = (
-    date: string,
-    isCompare = false
-  ): WebTileLayer => {
-    const id = generateTileID(date, isCompare);
-    // Create a WebTileLayer for Nearmap imagery.
-    // We are using tileinfo we created earlier.
-    const wtl = new WebTileLayer({
-      urlTemplate: `${tileURL}/${direction}/{level}/{col}/{row}.img?apikey=${nApiKey}&until=${date}`,
-      copyright: 'Nearmap',
-      tileInfo,
-      title: `Nearmap for ${id}`,
-      opacity,
-      // blendMode,
-      id
-    });
+  const generateWebTileLayer = useCallback(
+    (date: string, isCompare = false): WebTileLayer => {
+      const id = generateTileID(date, isCompare);
+      // Create a WebTileLayer for Nearmap imagery.
+      // We are using tileinfo we created earlier.
+      const wtl = new WebTileLayer({
+        urlTemplate: `${tileURL}/${direction}/{level}/{col}/{row}.img?apikey=${nApiKey}&until=${date}`,
+        copyright: 'Nearmap',
+        tileInfo: getTileInfo(),
+        title: `Nearmap for ${id}`,
+        opacity,
+        // blendMode,
+        id
+      });
 
-    wtl.on('layerview-create-error', () => {
-      wtl.refresh();
-    });
+      wtl.on('layerview-create-error', () => {
+        wtl.refresh();
+      });
 
-    return wtl;
+      return wtl;
+    },
+    [getTileInfo]
+  );
+
+  // load map task
+  const loadMapTask = useCallback(
+    (isCompare: boolean): void => {
+      const date = isCompare ? compareDate : mapDate;
+      const newMapLayer = generateWebTileLayer(date, isCompare);
+      // put compare map at back
+      const index = isCompare ? 0 : 1;
+      // set compare map visibility to false when compare is false
+      if ((!compareRef.current && isCompare) || !nmapActive) {
+        newMapLayer.visible = false;
+      }
+      view.current?.map.add(newMapLayer, index);
+      if (swipeWidgetRef.current !== undefined) {
+        addSwipeLayer(isCompare, newMapLayer, swipeWidgetRef.current);
+      }
+    },
+    [compareDate, generateWebTileLayer, mapDate, nmapActive]
+  );
+
+  // map cleanup task
+  const mapCleanupTask = (isCompare: boolean): void => {
+    const oldId = isCompare ? 'compare-' : 'base-';
+    const oldLayers: any = view.current?.map.layers.filter((y) =>
+      y.id.includes(oldId)
+    );
+    view.current?.map.removeMany(oldLayers);
+
+    if (swipeWidgetRef.current !== undefined) {
+      removeSwipeLayer(isCompare, swipeWidgetRef.current);
+    }
   };
 
   // sync date function for new date list
@@ -160,10 +195,14 @@ const App = (): JSX.Element => {
     fetch(
       `${coverageURL}/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=500`
     )
-      .then(async (response) => await response.json())
+      .then(async (response) => {
+        if (response.status === 200) return await response.json();
+      })
       .then((data) => {
         if (data.surveys.length === 0) {
           setNmapDisable(true);
+          setNmapActive(false);
+          handleCompare(false);
         } else {
           setNmapDisable(false);
           const nmDateList: string[] = data.surveys.map(
@@ -251,40 +290,21 @@ const App = (): JSX.Element => {
       .catch((err) => console.log(err));
   }, [getLods]);
 
-  // date change hook
-  const useMapDate = (date: string, isCompare = false): void => {
-    useEffect(() => {
-      const newMapLayer = generateWebTileLayer(date, isCompare);
-      // put compare map at back
-      const index = isCompare ? 0 : 1;
-      // set compare map visibility to false when compare is false
-      if (!compareRef.current && isCompare) {
-        newMapLayer.visible = false;
-      }
-      view.current?.map.add(newMapLayer, index);
+  // map date hook
+  useEffect(() => {
+    loadMapTask(false);
+    return () => {
+      mapCleanupTask(false);
+    };
+  }, [loadMapTask]);
 
-      if (swipeWidgetRef.current !== undefined) {
-        addSwipeLayer(isCompare, newMapLayer, swipeWidgetRef.current);
-      }
-
-      return () => {
-        const oldLayers: any = view.current?.map.layers.filter(
-          (y) => y.id === generateTileID(date, isCompare)
-        );
-        view.current?.map.removeMany(oldLayers);
-
-        if (swipeWidgetRef.current !== undefined) {
-          console.log('remove layer!');
-          removeSwipeLayer(isCompare, swipeWidgetRef.current);
-        }
-      };
-    }, [date, isCompare]);
-  };
-
-  // compare date
-  useMapDate(compareDate, true);
-  // map date
-  useMapDate(mapDate);
+  // compare date hook
+  useEffect(() => {
+    loadMapTask(true);
+    return () => {
+      mapCleanupTask(true);
+    };
+  }, [loadMapTask]);
 
   // compare function
   useEffect(() => {
@@ -319,6 +339,7 @@ const App = (): JSX.Element => {
     };
   }, [compare]);
 
+  // set map visibility
   useEffect(() => {
     const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
       bs.id.includes('base-')
@@ -330,6 +351,11 @@ const App = (): JSX.Element => {
     <>
       <div id="viewDiv" ref={mapRef}></div>
       <div id="mapDatePicker">
+        {nmapDisable && (
+          <Alert sx={{ mb: 1 }} severity="info">
+            No nearmap data found for this area
+          </Alert>
+        )}
         <Box className="grid-nav">
           <Box className="nmapactive-button">
             <Switch
@@ -339,9 +365,6 @@ const App = (): JSX.Element => {
               sx={{ backgroundColor: 'white', borderRadius: 2 }}
             />
           </Box>
-          {nmapDisable && (
-            <Alert severity="info">No nearmap data found for this area</Alert>
-          )}
           {!nmapDisable &&
             nmapActive && [
               <MapDatepicker
