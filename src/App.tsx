@@ -48,6 +48,11 @@ interface NearmapCoverage {
   captureDate: string;
 }
 
+const NO_KEY = 'API key not found';
+const NO_AUTHORIZE = 'You are not authorized to access this area';
+const NO_DATE = 'No Datelist Found';
+const TIMEOUT = 'Something wrong happened';
+
 const App = (): JSX.Element => {
   const dateToday = format(new Date(), 'yyyy-MM-dd');
 
@@ -59,21 +64,24 @@ const App = (): JSX.Element => {
   const [compare, setCompare] = useState(false);
   const [nmapActive, setNmapActive] = useState(false);
   const [nmapDisable, setNmapDisable] = useState(false);
+  const [errorMode, setErrorMode] = useState<string | null>(null);
 
   const mapRef = useRef<any>();
   const swipeWidgetRef = useRef<Swipe>();
   const view = useRef<MapView>();
-  const compareRef = useRef(compare);
+  const compareRef = useRef(false);
+  const nmapActiveRef = useRef(false);
 
   const handleCompare = (value: boolean): void => {
     setCompare(value);
     compareRef.current = value;
   };
 
-  const handleNmapActive = (): void => {
-    setNmapActive(!nmapActive);
-    if (compare) handleCompare(false);
-  };
+  const handleNmapActive = useCallback((value: boolean): void => {
+    nmapActiveRef.current = value;
+    setNmapActive(value);
+    handleCompare(false);
+  }, []);
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -141,21 +149,22 @@ const App = (): JSX.Element => {
 
   // load map task
   const loadMapTask = useCallback(
-    (isCompare: boolean): void => {
-      const date = isCompare ? compareDate : mapDate;
-      const newMapLayer = generateWebTileLayer(date, isCompare);
-      // put compare map at back
-      const index = isCompare ? 0 : 1;
-      // set compare map visibility to false when compare is false
-      if ((!compareRef.current && isCompare) || !nmapActive) {
-        newMapLayer.visible = false;
-      }
-      view.current?.map.add(newMapLayer, index);
-      if (swipeWidgetRef.current !== undefined) {
-        addSwipeLayer(isCompare, newMapLayer, swipeWidgetRef.current);
+    (date: string, isCompare: boolean): void => {
+      if (errorMode === null) {
+        const newMapLayer = generateWebTileLayer(date, isCompare);
+        // put compare map at back
+        const index = isCompare ? 0 : 1;
+        // set compare map visibility to false when compare is false
+        if ((!compareRef.current && isCompare) || !nmapActiveRef.current) {
+          newMapLayer.visible = false;
+        }
+        view.current?.map.add(newMapLayer, index);
+        if (swipeWidgetRef.current !== undefined) {
+          addSwipeLayer(isCompare, newMapLayer, swipeWidgetRef.current);
+        }
       }
     },
-    [compareDate, generateWebTileLayer, mapDate, nmapActive]
+    [errorMode, generateWebTileLayer]
   );
 
   // map cleanup task
@@ -192,6 +201,19 @@ const App = (): JSX.Element => {
     const originLon = lon2tile(lonLat[0], originZoom);
     const originLat = lat2tile(lonLat[1], originZoom);
 
+    const setDisable = (value: string | null): void => {
+      const disabled = value !== null;
+      setErrorMode(value);
+      setNmapDisable(disabled);
+
+      if (disabled && value !== TIMEOUT) {
+        handleNmapActive(false);
+      }
+      if (disabled) {
+        handleCompare(false);
+      }
+    };
+
     fetch(
       `${coverageURL}/${originZoom}/${originLon}/${originLat}?apikey=${nApiKey}&limit=500`
     )
@@ -199,21 +221,29 @@ const App = (): JSX.Element => {
         if (response.status === 200) return await response.json();
       })
       .then((data) => {
-        if (data.surveys.length === 0) {
-          setNmapDisable(true);
-          setNmapActive(false);
-          handleCompare(false);
-        } else {
-          setNmapDisable(false);
-          const nmDateList: string[] = data.surveys.map(
-            (d: NearmapCoverage) => d.captureDate
-          );
-          const finalDateList = [...new Set(nmDateList)];
-          syncDates(finalDateList);
+        switch (true) {
+          case data.error === NO_KEY:
+          case data.error === NO_AUTHORIZE: {
+            setDisable(data.error);
+            break;
+          }
+          case data.surveys.length === 0: {
+            setDisable(NO_DATE);
+            break;
+          }
+          default: {
+            setDisable(null);
+            const nmDateList: string[] = data.surveys.map(
+              (d: NearmapCoverage) => d.captureDate
+            );
+            const finalDateList = [...new Set(nmDateList)];
+            syncDates(finalDateList);
+            break;
+          }
         }
       })
       .catch((err) => console.log(err));
-  }, [lonLat, syncDates]);
+  }, [handleNmapActive, lonLat, syncDates]);
 
   // run on mount
   useEffect(() => {
@@ -292,23 +322,23 @@ const App = (): JSX.Element => {
 
   // map date hook
   useEffect(() => {
-    loadMapTask(false);
+    loadMapTask(mapDate, false);
     return () => {
       mapCleanupTask(false);
     };
-  }, [loadMapTask]);
+  }, [loadMapTask, mapDate]);
 
   // compare date hook
   useEffect(() => {
-    loadMapTask(true);
+    loadMapTask(compareDate, true);
     return () => {
       mapCleanupTask(true);
     };
-  }, [loadMapTask]);
+  }, [compareDate, loadMapTask]);
 
   // compare function
   useEffect(() => {
-    if (compare) {
+    if (errorMode === null && compare) {
       const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
         bs.id.includes('base-')
       );
@@ -337,23 +367,24 @@ const App = (): JSX.Element => {
         swipeWidgetRef.current.destroy();
       }
     };
-  }, [compare]);
+  }, [compare, errorMode]);
 
   // set map visibility
   useEffect(() => {
     const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
       bs.id.includes('base-')
     );
-    nearmapLead.visible = nmapActive;
+    if (nearmapLead !== undefined) nearmapLead.visible = nmapActive;
   }, [nmapActive, mapDate]);
+  console.log(errorMode);
 
   return (
     <>
       <div id="viewDiv" ref={mapRef}></div>
       <div id="mapDatePicker">
-        {nmapDisable && (
+        {errorMode !== null && (
           <Alert sx={{ mb: 1 }} severity="info">
-            No nearmap data found for this area
+            {errorMode}
           </Alert>
         )}
         <Box className="grid-nav">
@@ -361,7 +392,7 @@ const App = (): JSX.Element => {
             <Switch
               checked={nmapActive}
               disabled={nmapDisable}
-              onChange={handleNmapActive}
+              onChange={() => handleNmapActive(!nmapActive)}
               sx={{ backgroundColor: 'white', borderRadius: 2 }}
             />
           </Box>
