@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { LegacyRef, useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import format from 'date-fns/format';
 import esriConfig from '@arcgis/core/config';
@@ -66,7 +66,7 @@ const App = (): JSX.Element => {
   const [nmapDisable, setNmapDisable] = useState(false);
   const [errorMode, setErrorMode] = useState<string | null>(null);
 
-  const mapRef = useRef<any>();
+  const mapRef = useRef<HTMLDivElement>();
   const swipeWidgetRef = useRef<Swipe>();
   const view = useRef<MapView>();
   const compareRef = useRef(false);
@@ -170,10 +170,11 @@ const App = (): JSX.Element => {
   // map cleanup task
   const mapCleanupTask = (isCompare: boolean): void => {
     const oldId = isCompare ? 'compare-' : 'base-';
-    const oldLayers: any = view.current?.map.layers.filter((y) =>
-      y.id.includes(oldId)
-    );
-    view.current?.map.removeMany(oldLayers);
+    const oldLayers: __esri.Layer[] | undefined = view.current?.map.layers
+      .filter((y) => y.id.includes(oldId))
+      .toArray();
+
+    view.current?.map.removeMany(oldLayers as __esri.Layer[]);
 
     if (swipeWidgetRef.current !== undefined) {
       removeSwipeLayer(isCompare, swipeWidgetRef.current);
@@ -339,18 +340,19 @@ const App = (): JSX.Element => {
   // compare function
   useEffect(() => {
     if (errorMode === null && compare) {
-      const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
-        bs.id.includes('base-')
-      );
-      const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
-        cp.id.includes('compare')
-      );
-      nearmapTrail.visible = true;
+      const nearmapLead: __esri.Layer | undefined = view.current?.map.layers
+        .filter((bs) => bs.id.includes('base-'))
+        .at(0);
+      const nearmapTrail: __esri.Layer | undefined = view.current?.map.layers
+        .filter((cp) => cp.id.includes('compare'))
+        .at(0);
+
+      if (nearmapTrail !== undefined) nearmapTrail.visible = true;
 
       // create a new Swipe widget
       const swipe = new Swipe({
-        leadingLayers: [nearmapLead],
-        trailingLayers: [nearmapTrail],
+        leadingLayers: [nearmapLead as __esri.Layer],
+        trailingLayers: [nearmapTrail as __esri.Layer],
         position: 35, // set position of widget to 35%
         view: view.current,
         id: `compare-swipe`
@@ -359,9 +361,10 @@ const App = (): JSX.Element => {
       view.current?.ui.add(swipe);
     }
     return () => {
-      const [nearmapTrail]: any = view.current?.map.layers.filter((cp) =>
-        cp.id.includes('compare-')
-      );
+      const nearmapTrail: __esri.Layer | undefined = view.current?.map.layers
+        .filter((cp) => cp.id.includes('compare-'))
+        .at(0);
+
       if (nearmapTrail !== undefined) nearmapTrail.visible = false;
       if (swipeWidgetRef.current !== undefined) {
         swipeWidgetRef.current.destroy();
@@ -371,16 +374,17 @@ const App = (): JSX.Element => {
 
   // set map visibility
   useEffect(() => {
-    const [nearmapLead]: any = view.current?.map.layers.filter((bs) =>
-      bs.id.includes('base-')
-    );
+    const nearmapLead: __esri.Layer | undefined = view.current?.map.layers
+      .filter((bs) => bs.id.includes('base-'))
+      .at(0);
+
     if (nearmapLead !== undefined) nearmapLead.visible = nmapActive;
   }, [nmapActive, mapDate]);
   console.log(errorMode);
 
   return (
     <>
-      <div id="viewDiv" ref={mapRef}></div>
+      <div id="viewDiv" ref={mapRef as LegacyRef<HTMLDivElement>}></div>
       <div id="mapDatePicker">
         {errorMode !== null && (
           <Alert sx={{ mb: 1 }} severity="info">

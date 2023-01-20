@@ -5,7 +5,7 @@ import './index.css';
 
 interface CompareProps {
   compare: boolean;
-  set: any;
+  set: Function;
   disabled: boolean;
 }
 

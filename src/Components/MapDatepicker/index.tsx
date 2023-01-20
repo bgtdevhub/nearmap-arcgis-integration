@@ -16,7 +16,7 @@ import './index.css';
 
 interface DatePickerProps {
   mapDate: string;
-  setMapDate: any;
+  setMapDate: Function;
   dateList: string[];
 }
 
