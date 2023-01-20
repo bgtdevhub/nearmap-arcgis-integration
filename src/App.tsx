@@ -357,6 +357,7 @@ const App = (): JSX.Element => {
         view: view.current,
         id: `compare-swipe`
       });
+
       swipeWidgetRef.current = swipe;
       view.current?.ui.add(swipe);
     }
@@ -380,7 +381,6 @@ const App = (): JSX.Element => {
 
     if (nearmapLead !== undefined) nearmapLead.visible = nmapActive;
   }, [nmapActive, mapDate]);
-  console.log(errorMode);
 
   return (
     <>
