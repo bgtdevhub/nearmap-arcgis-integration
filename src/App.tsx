@@ -72,16 +72,19 @@ const App = (): JSX.Element => {
   const compareRef = useRef(false);
   const nmapActiveRef = useRef(false);
 
-  function handleCompare(value: boolean): void {
+  const handleCompare = useCallback((value: boolean): void => {
     setCompare(value);
     compareRef.current = value;
-  }
-
-  const handleNmapActive = useCallback((value: boolean): void => {
-    nmapActiveRef.current = value;
-    setNmapActive(value);
-    handleCompare(false);
   }, []);
+
+  const handleNmapActive = useCallback(
+    (value: boolean): void => {
+      nmapActiveRef.current = value;
+      setNmapActive(value);
+      handleCompare(false);
+    },
+    [handleCompare]
+  );
 
   // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
   // By default ArcGIS SDK only goes to zoom level 19,
@@ -244,7 +247,7 @@ const App = (): JSX.Element => {
         }
       })
       .catch((err) => console.log(err));
-  }, [handleNmapActive, lonLat, syncDates]);
+  }, [handleCompare, handleNmapActive, lonLat, syncDates]);
 
   // run on mount
   useEffect(() => {

@@ -102,32 +102,38 @@ const MapDatepicker = ({
   );
 
   // get target date, next or previous function
-  const getTargetDate = (prevDate = true): void => {
-    const currentIndex = finalMenuItem.findIndex((i) => i === mapDate);
-    let targetIndex = prevDate ? currentIndex + 1 : currentIndex - 1;
-    let finalDate = finalMenuItem[targetIndex];
+  const getTargetDate = useCallback(
+    (prevDate = true): void => {
+      const currentIndex = finalMenuItem.findIndex((i) => i === mapDate);
+      let targetIndex = prevDate ? currentIndex + 1 : currentIndex - 1;
+      let finalDate = finalMenuItem[targetIndex];
 
-    // skip year item
-    if (finalDate.length === 4) {
-      targetIndex = prevDate ? targetIndex + 1 : targetIndex - 1;
-      finalDate = finalMenuItem[targetIndex];
-    }
-    setMapDate(finalDate);
-    navButtonState(finalDate);
-  };
+      // skip year item
+      if (finalDate.length === 4) {
+        targetIndex = prevDate ? targetIndex + 1 : targetIndex - 1;
+        finalDate = finalMenuItem[targetIndex];
+      }
+      setMapDate(finalDate);
+      navButtonState(finalDate);
+    },
+    [finalMenuItem, mapDate, navButtonState, setMapDate]
+  );
 
-  function getPrevDate(): void {
+  const getPrevDate = useCallback((): void => {
     getTargetDate(true);
-  }
+  }, [getTargetDate]);
 
-  function getNextDate(): void {
+  const getNextDate = useCallback((): void => {
     getTargetDate(false);
-  }
+  }, [getTargetDate]);
 
-  function handleDateChange(e: SelectChangeEvent<string>): void {
-    setMapDate(e.target.value);
-    navButtonState(e.target.value);
-  }
+  const handleDateChange = useCallback(
+    (e: SelectChangeEvent<string>): void => {
+      setMapDate(e.target.value);
+      navButtonState(e.target.value);
+    },
+    [navButtonState, setMapDate]
+  );
 
   useEffect(() => {
     navButtonState(mapDate);

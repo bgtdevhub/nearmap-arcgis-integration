@@ -2,6 +2,7 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import CompareIcon from '@mui/icons-material/Compare';
 import './index.css';
+import { useCallback } from 'react';
 
 interface CompareProps {
   compare: boolean;
@@ -14,9 +15,9 @@ const CompareNearmapButton = ({
   set,
   disabled
 }: CompareProps): JSX.Element => {
-  function onCompare(): void {
+  const onCompare = useCallback((): void => {
     set(!compare);
-  }
+  }, [compare, set]);
 
   return (
     <Box className="compare-grid">
