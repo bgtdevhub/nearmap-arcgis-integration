@@ -20,10 +20,10 @@ interface DatePickerProps {
   dateList: string[];
 }
 
-const renderSelectedDate = (date: string): string => {
+function renderSelectedDate(date: string): string {
   const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
   return format(parsedDate, 'E MMM dd yyyy');
-};
+}
 
 const renderMenuItem = (dateList: string[]): JSX.Element[] => {
   return dateList.map((d) => {
@@ -116,10 +116,18 @@ const MapDatepicker = ({
     navButtonState(finalDate);
   };
 
-  const handleDateChange = (e: SelectChangeEvent<string>): void => {
+  function getPrevDate(): void {
+    getTargetDate(true);
+  }
+
+  function getNextDate(): void {
+    getTargetDate(false);
+  }
+
+  function handleDateChange(e: SelectChangeEvent<string>): void {
     setMapDate(e.target.value);
     navButtonState(e.target.value);
-  };
+  }
 
   useEffect(() => {
     navButtonState(mapDate);
@@ -131,7 +139,7 @@ const MapDatepicker = ({
         title="Previous Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(true)}
+        onClick={getPrevDate}
         disabled={prevDisabled}
         className="nav-button prev-button"
       >
@@ -157,7 +165,7 @@ const MapDatepicker = ({
             className: 'dropdown-menu'
           }}
           IconComponent={() => null}
-          renderValue={(s) => renderSelectedDate(s)}
+          renderValue={renderSelectedDate}
           SelectDisplayProps={{
             className: 'mobile-display'
           }}
@@ -169,7 +177,7 @@ const MapDatepicker = ({
         title="Next Date"
         variant="text"
         color="inherit"
-        onClick={() => getTargetDate(false)}
+        onClick={getNextDate}
         disabled={nextDisabled}
         className="nav-button next-button"
       >

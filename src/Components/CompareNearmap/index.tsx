@@ -14,14 +14,16 @@ const CompareNearmapButton = ({
   set,
   disabled
 }: CompareProps): JSX.Element => {
+  function onCompare(): void {
+    set(!compare);
+  }
+
   return (
     <Box className="compare-grid">
       <Button
         aria-label="compare map"
         component="label"
-        onClick={() => {
-          set(!compare);
-        }}
+        onClick={onCompare}
         size="small"
         variant="contained"
         color="inherit"

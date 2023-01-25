@@ -72,10 +72,10 @@ const App = (): JSX.Element => {
   const compareRef = useRef(false);
   const nmapActiveRef = useRef(false);
 
-  const handleCompare = (value: boolean): void => {
+  function handleCompare(value: boolean): void {
     setCompare(value);
     compareRef.current = value;
-  };
+  }
 
   const handleNmapActive = useCallback((value: boolean): void => {
     nmapActiveRef.current = value;
