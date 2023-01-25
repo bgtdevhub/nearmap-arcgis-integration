@@ -61,6 +61,10 @@ body,
   grid-row: 1 / 1;
 }
 
+.popup-tables {
+  text-align: left;
+}
+
 @media screen and (max-width: 480px) {
   .grid-nav {
     display: grid;

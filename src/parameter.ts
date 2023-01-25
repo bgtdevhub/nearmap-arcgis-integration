@@ -8,7 +8,8 @@ export const originZoom = 12; // Starting Zoom level for the Web Map
 export const nearmapMinZoom = 12; // Nearmap Imagery Lowest resolution zoom level the user can view
 export const nearmapMaxZoom = 24; // Nearmap Imagery Highest resolution zoom level the user can view
 export const opacity = 1; // Range of 0.1 to 1.0
-//   export const blendMode = 'darken'; // See available blend modes here: https://doc.arcgis.com/en/arcgis-online/create-maps/use-blend-modes-mv.htm
+export const locatorUrl =
+  'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer';
 
 // LOD Tile parameter
 const tilesize = 256;

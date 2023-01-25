@@ -18,6 +18,8 @@ import Alert from '@mui/material/Alert';
 import Switch from '@mui/material/Switch';
 import LayerList from '@arcgis/core/widgets/LayerList';
 import Expand from '@arcgis/core/widgets/Expand';
+import * as locator from '@arcgis/core/rest/locator';
+import Graphic from '@arcgis/core/Graphic';
 
 import MapDatepicker from './Components/MapDatepicker';
 import CompareNearmapButton from './Components/CompareNearmap';
@@ -41,7 +43,8 @@ import {
   origin,
   initialResolution,
   inchesPerMeter,
-  coverageURL
+  coverageURL,
+  locatorUrl
 } from './parameter';
 
 interface NearmapCoverage {
@@ -149,6 +152,35 @@ const App = (): JSX.Element => {
     },
     [getTileInfo]
   );
+
+  /*************************
+   * Create a point graphic
+   *************************/
+  const createGraphic = (lat: number, long: number): void => {
+    if (view.current != null) {
+      // First create a point geometry
+      const point = {
+        type: 'point', // autocasts as new Point()
+        longitude: long,
+        latitude: lat
+      };
+
+      // Create a symbol for drawing the point
+      const markerSymbol = {
+        type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
+        color: [226, 119, 40]
+      };
+
+      // Create a graphic and add the geometry and symbol to it
+      const pointGraphic = new Graphic({
+        geometry: new Point(point),
+        symbol: markerSymbol
+      });
+
+      // Add the graphics to the view's graphics layer
+      view.current.graphics.add(pointGraphic);
+    }
+  };
 
   // load map task
   const loadMapTask = useCallback(
@@ -316,6 +348,65 @@ const App = (): JSX.Element => {
         ]);
       }
     );
+
+    /*******************************************************************
+     * This click event sets generic content on the popup not tied to
+     * a layer, graphic, or popupTemplate. The location of the point is
+     * used as input to a reverse geocode method and the resulting
+     * address is printed to the popup content.
+     *******************************************************************/
+    view.current.popup.autoOpenEnabled = false;
+    view.current.on('click', (event) => {
+      // Get the coordinates of the click on the view
+      const lat = Math.round(event.mapPoint.latitude * 1000) / 1000;
+      const lon = Math.round(event.mapPoint.longitude * 1000) / 1000;
+
+      view.current?.popup.open({
+        // Set the popup's title to the coordinates of the location
+        title: `Details`,
+        location: event.mapPoint // Set the location of the popup to the clicked location
+      });
+
+      const params = {
+        location: event.mapPoint
+      };
+
+      // Display the popup
+      // Execute a reverse geocode using the clicked location
+      locator
+        .locationToAddress(locatorUrl, params)
+        .then((response) => {
+          // If an address is successfully found, show it in the popup's content
+          if (view.current !== undefined)
+            view.current.popup.content = `
+            <table class="popup-tables">
+              <tbody>
+                <tr>
+                  <th>Address</th>
+                  <td>${response.address}</td>
+                </tr>
+                <tr>
+                  <th>Latitude</th>
+                  <td>${lat}</td>
+                </tr>
+                <tr>
+                  <th>Longitude</th>
+                  <td>${lon}</td>
+                </tr>
+              </tbody>
+            </table>
+            `;
+
+          view.current?.graphics.removeAll();
+          createGraphic(lat, lon);
+        })
+        .catch(() => {
+          // If the promise fails and no result is found, show a generic message
+          if (view.current !== undefined)
+            view.current.popup.content =
+              'No address was found for this location';
+        });
+    });
 
     view.current
       .when(() => {
