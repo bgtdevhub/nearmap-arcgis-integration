@@ -16,3 +16,9 @@ const tilesize = 256;
 const earthCircumference = 40075016.685568;
 export const inchesPerMeter = 39.37;
 export const initialResolution = earthCircumference / tilesize;
+
+// error
+export const NO_KEY = 'API key not found';
+export const NO_AUTHORIZE = 'You are not authorized to access this area';
+export const NO_DATE = 'No Datelist Found';
+export const TIMEOUT = 'Something wrong happened';

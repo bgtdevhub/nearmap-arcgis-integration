@@ -44,42 +44,49 @@ import {
   initialResolution,
   inchesPerMeter,
   coverageURL,
-  locatorUrl
+  locatorUrl,
+  TIMEOUT,
+  NO_DATE,
+  NO_AUTHORIZE,
+  NO_KEY
 } from './parameter';
 
 interface NearmapCoverage {
   captureDate: string;
 }
 
-const NO_KEY = 'API key not found';
-const NO_AUTHORIZE = 'You are not authorized to access this area';
-const NO_DATE = 'No Datelist Found';
-const TIMEOUT = 'Something wrong happened';
-
 const App = (): JSX.Element => {
-  const dateToday = format(new Date(), 'yyyy-MM-dd');
+  const dateToday = format(new Date(), 'yyyy-MM-dd'); // today's date as initial
 
   esriConfig.request.timeout = 90000;
-  const [mapDate, setMapDate] = useState(dateToday);
-  const [dateList, setDateList] = useState([dateToday]);
-  const [lonLat, setLonLat] = useState(origin);
-  const [compareDate, setCompareDate] = useState(dateToday);
-  const [compare, setCompare] = useState(false);
-  const [nmapActive, setNmapActive] = useState(false);
-  const [nmapDisable, setNmapDisable] = useState(false);
-  const [errorMode, setErrorMode] = useState<string | null>(null);
+  const [mapDate, setMapDate] = useState(dateToday); // leading map date
+  const [dateList, setDateList] = useState([dateToday]); // date of available Nearmap imagery
+  const [lonLat, setLonLat] = useState(origin); // longitude-latitude pair
+  const [compareDate, setCompareDate] = useState(dateToday); // trailing map date
+  const [compare, setCompare] = useState(false); // compare state
+  const [nmapActive, setNmapActive] = useState(false); // Nearmap Active state
+  const [nmapDisable, setNmapDisable] = useState(false); // Nearmap Disabled state
+  const [errorMode, setErrorMode] = useState<string | null>(null); // Error mode
 
-  const mapRef = useRef<HTMLDivElement>();
-  const swipeWidgetRef = useRef<Swipe>();
-  const view = useRef<MapView>();
-  const compareRef = useRef(false);
-  const nmapActiveRef = useRef(false);
+  const mapRef = useRef<HTMLDivElement>(); // Map Reference
+  const swipeWidgetRef = useRef<Swipe>(); // Swipe Widget Reference
+  const view = useRef<MapView>(); // MapView Reference
+  const compareRef = useRef(false); // Compare Reference. For checking
+  const nmapActiveRef = useRef(false); // Nearmap Active Reference. For checking
 
+  /**
+   * Set Compare state and ref
+   * @param value value to be set
+   */
   const handleCompare = useCallback((value: boolean): void => {
     setCompare(value);
     compareRef.current = value;
   }, []);
 
+  /**
+   * Set Nearmap Active state and ref + execute handleCompare = false
+   * @param value value to be set
+   */
   const handleNmapActive = useCallback(
     (value: boolean): void => {
       nmapActiveRef.current = value;
@@ -89,9 +96,12 @@ const App = (): JSX.Element => {
     [handleCompare]
   );
 
-  // Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126
-  // By default ArcGIS SDK only goes to zoom level 19,
-  // In order to overcome this, we need to add more Level Of Detail (LOD) entries to both the view and the web tile layer
+  /**
+   * Taken from https://gist.github.com/stdavis/6e5c721d50401ddbf126.
+   * By default ArcGIS SDK only goes to zoom level 19,
+   * In order to overcome this, we need to add more Level Of Detail (LOD) entries
+   * to both the view and the web tile layer
+   */
   const getLods = useCallback(() => {
     const lods: LOD[] = [];
     for (let zoom = nearmapMinZoom; zoom <= nearmapMaxZoom; zoom++) {
@@ -109,10 +119,12 @@ const App = (): JSX.Element => {
     return lods;
   }, []);
 
-  // Create a tileinfo instance with increased level of detail
-  // using the lod array we created earlier
-  // We need to use rows and cols (currently undocumented in https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-support-TileInfo.html)
-  // in addition to width and height properties
+  /**
+   * Create a tileinfo instance with increased level of detail
+   * using the lod array we created earlier We need to use rows and cols (currently undocumented in
+   * https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-support-TileInfo.html)
+   * in addition to width and height properties
+   */
   const getTileInfo = useCallback(() => {
     const tileInfo = new TileInfo({
       dpi: 72,
@@ -128,7 +140,11 @@ const App = (): JSX.Element => {
     return tileInfo;
   }, [getLods]);
 
-  // generate web tile layer
+  /**
+   * Generate web tile layer based on date
+   * @param date date to process
+   * @param isCompare date is trailing or not. Default to false
+   */
   const generateWebTileLayer = useCallback(
     (date: string, isCompare = false): WebTileLayer => {
       const id = generateTileID(date, isCompare);
@@ -153,9 +169,11 @@ const App = (): JSX.Element => {
     [getTileInfo]
   );
 
-  /*************************
-   * Create a point graphic
-   *************************/
+  /**
+   * Create a point graphic on map
+   * @param lat latitude
+   * @param long longitude
+   */
   const createGraphic = (lat: number, long: number): void => {
     if (view.current != null) {
       // First create a point geometry
@@ -182,7 +200,11 @@ const App = (): JSX.Element => {
     }
   };
 
-  // load map task
+  /**
+   * Add web tile and swipe (if available) layer to view
+   * @param date date to process
+   * @param isCompare date is trailing or not
+   */
   const loadMapTask = useCallback(
     (date: string, isCompare: boolean): void => {
       if (errorMode === null) {
@@ -202,7 +224,10 @@ const App = (): JSX.Element => {
     [errorMode, generateWebTileLayer]
   );
 
-  // map cleanup task
+  /**
+   * Cleanup - remove current web tile and swipe (if available) layer from view
+   * @param isCompare date is trailing or not
+   */
   const mapCleanupTask = (isCompare: boolean): void => {
     const oldId = isCompare ? 'compare-' : 'base-';
     const oldLayers: __esri.Layer[] | undefined = view.current?.map.layers
@@ -217,6 +242,11 @@ const App = (): JSX.Element => {
   };
 
   // sync date function for new date list
+  /**
+   * Check if resetting of datelist, mapDate, compareDate is required or not.
+   * Perform the changes if required
+   * @param nmDateList list of dates
+   */
   const syncDates = useCallback(
     (nmDateList: string[]): void => {
       if (dateList.join() !== nmDateList.join()) {
@@ -232,7 +262,9 @@ const App = (): JSX.Element => {
     [compareDate, dateList, mapDate]
   );
 
-  // fetch list of capture date based on origin
+  /**
+   * Fetch list of available Nearmap imagery date based on lat long
+   */
   useEffect(() => {
     const originLon = lon2tile(lonLat[0], originZoom);
     const originLat = lat2tile(lonLat[1], originZoom);
@@ -281,7 +313,9 @@ const App = (): JSX.Element => {
       .catch((err) => console.log(err));
   }, [handleCompare, handleNmapActive, lonLat, syncDates]);
 
-  // run on mount
+  /**
+   * Run on mount @ windows is defined
+   */
   useEffect(() => {
     const map = new Map({ basemap: 'streets-vector' });
 
